@@ -68,8 +68,20 @@ export default function ReleaseTable() {
                     <td className="px-6 py-4 text-zinc-400 group-hover:text-zinc-200">
                       {release.genre}
                     </td>
-                    <td className="px-6 py-4 text-zinc-400 group-hover:text-zinc-200">
-                      {release.release_type}
+                    <td className="px-6 py-4">
+                      {release.release_type.toLowerCase() === "new" ? (
+                        <span className="inline-block px-3 py-1 text-sm font-semibold text-red-100 bg-red-700 rounded-full shadow-sm">
+                          {release.release_type.toLowerCase()}
+                        </span>
+                      ) : release.release_type.toLowerCase() === "reissue" ? (
+                        <span className="inline-block px-3 py-1 text-sm font-semibold text-purple-100 bg-purple-700 rounded-full shadow-sm">
+                          {release.release_type.toLowerCase()}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">
+                          {release.release_type.toLowerCase()}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 );
