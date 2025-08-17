@@ -51,6 +51,16 @@ export default function ReleaseTable() {
                   const artistInLibrary = artistReleases.some(
                     (r) => r.artist_in_library
                   );
+                  const hasSimilarArtist = artistReleases.some(
+                    (r) => r.similar_artist
+                  );
+
+                  const artistStyle = artistInLibrary
+                    ? "text-red-500"
+                    : hasSimilarArtist
+                    ? "text-yellow-400"
+                    : "text-zinc-300"; // default modern gray
+
                   const badgeCount = artistReleases.length;
                   return (
                     <React.Fragment key={artist}>
@@ -61,9 +71,7 @@ export default function ReleaseTable() {
                         onClick={() => toggleArtist(artist)}
                       >
                         <td
-                          className={`px-6 py-4 font-medium flex items-center ${
-                            artistInLibrary ? "text-red-500" : "text-zinc-300"
-                          }`}
+                          className={`px-6 py-4 font-medium flex items-center ${artistStyle} group-hover:text-red-500`}
                         >
                           <svg
                             className={`w-4 h-4 mr-2 transition-transform duration-200 ${
@@ -86,7 +94,6 @@ export default function ReleaseTable() {
                             {badgeCount}
                           </span>
                         </td>
-
                         <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
                         <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
                         <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
