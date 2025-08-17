@@ -1,8 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function ReleaseTable() {
   const [releases, setReleases] = useState([]);
+  const [groupedReleases, setGroupedReleases] = useState({});
+  const [expandedArtists, setExpandedArtists] = useState(new Set());
   const [summary, setSummary] = useState({
     totalArtists: 0,
     totalAlbums: 0,
@@ -16,26 +18,39 @@ export default function ReleaseTable() {
       .then((data) => {
         setReleases(data);
 
-        // Calculate summary
+        // Summary
         const artistsSet = new Set();
         let newCount = 0;
         let reissueCount = 0;
-
         data.forEach((r) => {
           artistsSet.add(r.artist);
-          if (r.release_type.toLowerCase() === "new") newCount += 1;
-          if (r.release_type.toLowerCase() === "reissue") reissueCount += 1;
+          if (r.release_type.toLowerCase() === "new") newCount++;
+          if (r.release_type.toLowerCase() === "reissue") reissueCount++;
         });
-
         setSummary({
           totalArtists: artistsSet.size,
           totalAlbums: data.length,
           newCount,
           reissueCount,
         });
+
+        // Group by artist
+        const grouped = {};
+        data.forEach((r) => {
+          if (!grouped[r.artist]) grouped[r.artist] = [];
+          grouped[r.artist].push(r);
+        });
+        setGroupedReleases(grouped);
       })
       .catch((err) => console.error("Error loading releases:", err));
   }, []);
+
+  const toggleArtist = (artist) => {
+    const newSet = new Set(expandedArtists);
+    if (newSet.has(artist)) newSet.delete(artist);
+    else newSet.add(artist);
+    setExpandedArtists(newSet);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-900 to-black text-zinc-100 p-6">
@@ -44,7 +59,7 @@ export default function ReleaseTable() {
           New Spin
         </h1>
 
-        {/* Summary Stats */}
+        {/* Summary */}
         <div className="mb-6 text-center text-zinc-300">
           <span className="font-semibold">{summary.totalArtists} artists</span>,{" "}
           <span className="font-semibold">{summary.totalAlbums} albums</span> (
@@ -58,6 +73,7 @@ export default function ReleaseTable() {
           )
         </div>
 
+        {/* Table */}
         <div className="overflow-x-auto rounded-xl shadow-lg ring-1 ring-zinc-700/50">
           <table className="w-full border-collapse">
             <thead>
@@ -70,62 +86,98 @@ export default function ReleaseTable() {
               </tr>
             </thead>
             <tbody>
-              {releases.map((release, index) => {
-                const { artist_in_library, album_in_library, similar_artist } =
-                  release;
+              {Object.entries(groupedReleases).map(
+                ([artist, albums], artistIndex) => {
+                  const isExpanded = expandedArtists.has(artist);
+                  const artistInLibrary = albums.some(
+                    (r) => r.artist_in_library
+                  );
 
-                // Determine styles
-                const artistStyle = artist_in_library
-                  ? "text-red-500"
-                  : similar_artist
-                  ? "text-yellow-400"
-                  : "text-zinc-200";
+                  // Artist row style
+                  const artistRowStyle = `cursor-pointer font-medium ${
+                    artistInLibrary ? "text-red-500" : "text-zinc-300"
+                  } hover:text-red-500`;
 
-                const albumStyle = album_in_library
-                  ? "text-red-500"
-                  : "text-zinc-400";
+                  return (
+                    <React.Fragment key={artistIndex}>
+                      {/* Artist Row */}
+                      <tr
+                        onClick={() => toggleArtist(artist)}
+                        className={`border-t border-zinc-700/50 transition-colors group ${
+                          artistIndex % 2 === 0 ? "bg-zinc-900" : "bg-zinc-950"
+                        } hover:bg-red-900/30`}
+                      >
+                        <td
+                          className={`px-6 py-4 ${artistRowStyle}`}
+                          colSpan={5}
+                        >
+                          {isExpanded ? "▼ " : "▶ "} {artist}
+                        </td>
+                      </tr>
 
-                return (
-                  <tr
-                    key={index}
-                    className={`border-t border-zinc-700/50 transition-colors group ${
-                      index % 2 === 0 ? "bg-zinc-900" : "bg-zinc-950"
-                    } hover:bg-red-900/30`}
-                  >
-                    <td
-                      className={`px-6 py-4 font-medium ${artistStyle} group-hover:text-red-500`}
-                    >
-                      {release.artist}
-                    </td>
-                    <td
-                      className={`px-6 py-4 ${albumStyle} group-hover:text-zinc-200`}
-                    >
-                      {release.album}
-                    </td>
-                    <td className="px-6 py-4 text-zinc-400 group-hover:text-zinc-200">
-                      {release.label}
-                    </td>
-                    <td className="px-6 py-4 text-zinc-400 group-hover:text-zinc-200">
-                      {release.genre}
-                    </td>
-                    <td className="px-6 py-4">
-                      {release.release_type.toLowerCase() === "new" ? (
-                        <span className="inline-block px-3 py-1 text-sm font-semibold text-red-100 bg-red-700 rounded-full shadow-sm">
-                          {release.release_type.toLowerCase()}
-                        </span>
-                      ) : release.release_type.toLowerCase() === "reissue" ? (
-                        <span className="inline-block px-3 py-1 text-sm font-semibold text-purple-100 bg-purple-700 rounded-full shadow-sm">
-                          {release.release_type.toLowerCase()}
-                        </span>
-                      ) : (
-                        <span className="text-gray-300">
-                          {release.release_type.toLowerCase()}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+                      {/* Nested album rows */}
+                      {isExpanded &&
+                        albums.map((release, index) => {
+                          const {
+                            artist_in_library,
+                            album_in_library,
+                            similar_artist,
+                          } = release;
+
+                          const albumStyle = album_in_library
+                            ? "text-red-500"
+                            : "text-zinc-400";
+                          const artistStyle = artist_in_library
+                            ? "text-red-500"
+                            : similar_artist
+                            ? "text-yellow-400"
+                            : "text-zinc-200";
+
+                          return (
+                            <tr
+                              key={index}
+                              className={`border-t border-zinc-700/50 transition-colors group ${
+                                index % 2 === 0 ? "bg-zinc-900" : "bg-zinc-950"
+                              } hover:bg-red-900/30`}
+                            >
+                              <td
+                                className={`px-6 py-4 font-medium ${artistStyle}`}
+                              >
+                                &nbsp;&nbsp;{/* indent */}
+                              </td>
+                              <td className={`px-6 py-4 ${albumStyle}`}>
+                                {release.album}
+                              </td>
+                              <td className="px-6 py-4 text-zinc-400">
+                                {release.label}
+                              </td>
+                              <td className="px-6 py-4 text-zinc-400">
+                                {release.genre}
+                              </td>
+                              <td className="px-6 py-4">
+                                {release.release_type.toLowerCase() ===
+                                "new" ? (
+                                  <span className="inline-block px-3 py-1 text-sm font-semibold text-red-100 bg-red-700 rounded-full shadow-sm">
+                                    {release.release_type.toLowerCase()}
+                                  </span>
+                                ) : release.release_type.toLowerCase() ===
+                                  "reissue" ? (
+                                  <span className="inline-block px-3 py-1 text-sm font-semibold text-purple-100 bg-purple-700 rounded-full shadow-sm">
+                                    {release.release_type.toLowerCase()}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-300">
+                                    {release.release_type.toLowerCase()}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </React.Fragment>
+                  );
+                }
+              )}
             </tbody>
           </table>
         </div>
