@@ -26,6 +26,7 @@ export default function ReleaseTable() {
                 <th className="px-6 py-4">Album</th>
                 <th className="px-6 py-4">Label</th>
                 <th className="px-6 py-4">Genre</th>
+                <th className="px-6 py-4">Type</th>
               </tr>
             </thead>
             <tbody>
@@ -66,6 +67,9 @@ export default function ReleaseTable() {
                     </td>
                     <td className="px-6 py-4 text-zinc-400 group-hover:text-zinc-200">
                       {release.genre}
+                    </td>
+                    <td className="px-6 py-4 text-zinc-400 group-hover:text-zinc-200">
+                      {release.release_type}
                     </td>
                   </tr>
                 );
