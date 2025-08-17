@@ -3,20 +3,60 @@ import { useEffect, useState } from "react";
 
 export default function ReleaseTable() {
   const [releases, setReleases] = useState([]);
+  const [summary, setSummary] = useState({
+    totalArtists: 0,
+    totalAlbums: 0,
+    newCount: 0,
+    reissueCount: 0,
+  });
 
   useEffect(() => {
     fetch("/final_releases.json")
       .then((res) => res.json())
-      .then((data) => setReleases(data))
+      .then((data) => {
+        setReleases(data);
+
+        // Calculate summary
+        const artistsSet = new Set();
+        let newCount = 0;
+        let reissueCount = 0;
+
+        data.forEach((r) => {
+          artistsSet.add(r.artist);
+          if (r.release_type.toLowerCase() === "new") newCount += 1;
+          if (r.release_type.toLowerCase() === "reissue") reissueCount += 1;
+        });
+
+        setSummary({
+          totalArtists: artistsSet.size,
+          totalAlbums: data.length,
+          newCount,
+          reissueCount,
+        });
+      })
       .catch((err) => console.error("Error loading releases:", err));
   }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-900 to-black text-zinc-100 p-6">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 text-center tracking-tight text-red-600 drop-shadow-[0_0_6px_rgba(139,0,0,0.5)]">
+        <h1 className="text-4xl font-bold mb-4 text-center tracking-tight text-red-600 drop-shadow-[0_0_6px_rgba(139,0,0,0.5)]">
           New Spin
         </h1>
+
+        {/* Summary Stats */}
+        <div className="mb-6 text-center text-zinc-300">
+          <span className="font-semibold">{summary.totalArtists} artists</span>,{" "}
+          <span className="font-semibold">{summary.totalAlbums} albums</span> (
+          <span className="text-red-500 font-semibold">
+            {summary.newCount} new
+          </span>
+          ,{" "}
+          <span className="text-purple-400 font-semibold">
+            {summary.reissueCount} reissue
+          </span>
+          )
+        </div>
 
         <div className="overflow-x-auto rounded-xl shadow-lg ring-1 ring-zinc-700/50">
           <table className="w-full border-collapse">
