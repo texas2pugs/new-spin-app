@@ -24,7 +24,7 @@ export default function ReleaseTable() {
               <tr className="bg-zinc-800 text-left text-sm uppercase tracking-wider text-red-500">
                 <th className="px-6 py-4">Artist</th>
                 <th className="px-6 py-4">Album</th>
-                <th className="px-6 py-4">Release Date</th>
+                <th className="px-6 py-4">Label</th>
                 <th className="px-6 py-4">Genre</th>
               </tr>
             </thead>
@@ -59,7 +59,7 @@ export default function ReleaseTable() {
                       {release.album}
                     </td>
                     <td className="px-6 py-4 text-zinc-400 group-hover:text-zinc-200">
-                      {release.release_date}
+                      {release.label}
                     </td>
                     <td className="px-6 py-4 text-zinc-400 group-hover:text-zinc-200">
                       {release.genre}
