@@ -140,13 +140,13 @@ export default function ReleaseTable() {
                                 artistIndex % 2 === 0
                                   ? "bg-zinc-900"
                                   : "bg-zinc-950"
-                              } hover:bg-red-900/30`}
+                              } hover:bg-red-900/30 ${
+                                release.similar_artist ? "bg-yellow-900/20" : ""
+                              }`}
                             >
                               <td
                                 className={`px-6 py-4 font-medium ${artistStyle} pl-6`}
-                              >
-                                {/* Indent for album row */}
-                              </td>
+                              ></td>
                               <td className={`px-6 py-4 ${albumStyle}`}>
                                 {release.album}
                               </td>
