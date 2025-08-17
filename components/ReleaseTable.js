@@ -30,10 +30,19 @@ export default function ReleaseTable() {
             </thead>
             <tbody>
               {releases.map((release, index) => {
-                const artistHighlight =
-                  release.artist_in_library && !release.album_in_library;
-                const fullHighlight =
-                  release.artist_in_library && release.album_in_library;
+                const { artist_in_library, album_in_library, similar_artist } =
+                  release;
+
+                // Determine styles
+                const artistStyle = artist_in_library
+                  ? "text-red-500"
+                  : similar_artist
+                  ? "text-yellow-400"
+                  : "text-zinc-200";
+
+                const albumStyle = album_in_library
+                  ? "text-red-500"
+                  : "text-zinc-400";
 
                 return (
                   <tr
@@ -43,18 +52,12 @@ export default function ReleaseTable() {
                     } hover:bg-red-900/30`}
                   >
                     <td
-                      className={`px-6 py-4 font-medium ${
-                        artistHighlight || fullHighlight
-                          ? "text-red-500"
-                          : "text-zinc-200"
-                      } group-hover:text-red-500`}
+                      className={`px-6 py-4 font-medium ${artistStyle} group-hover:text-red-500`}
                     >
                       {release.artist}
                     </td>
                     <td
-                      className={`px-6 py-4 ${
-                        fullHighlight ? "text-red-500" : "text-zinc-400"
-                      } group-hover:text-zinc-200`}
+                      className={`px-6 py-4 ${albumStyle} group-hover:text-zinc-200`}
                     >
                       {release.album}
                     </td>
