@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 
 export default function ReleaseTable() {
   const [releases, setReleases] = useState([]);
@@ -12,13 +12,23 @@ export default function ReleaseTable() {
       .catch((err) => console.error("Error loading releases:", err));
   }, []);
 
-  // Group releases by artist
-  const grouped = releases.reduce((acc, release) => {
-    const artist = release.artist;
-    if (!acc[artist]) acc[artist] = [];
-    acc[artist].push(release);
-    return acc;
-  }, {});
+  // Memoized grouping by artist
+  const grouped = useMemo(() => {
+    return releases.reduce((acc, release) => {
+      const artist = release.artist;
+      if (!acc[artist]) acc[artist] = [];
+      acc[artist].push(release);
+      return acc;
+    }, {});
+  }, [releases]);
+
+  // Compute summary
+  const totalArtists = Object.keys(grouped).length;
+  const totalAlbums = releases.length;
+  const newCount = releases.filter((r) => r.release_type === "new").length;
+  const reissueCount = releases.filter(
+    (r) => r.release_type === "reissue"
+  ).length;
 
   const toggleArtist = (artist) => {
     setExpandedArtists((prev) => ({
@@ -30,9 +40,21 @@ export default function ReleaseTable() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-900 to-black text-zinc-100 p-6">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 text-center tracking-tight text-red-600 drop-shadow-[0_0_6px_rgba(139,0,0,0.5)]">
+        <h1 className="text-4xl font-bold mb-4 text-center tracking-tight text-red-600 drop-shadow-[0_0_6px_rgba(139,0,0,0.5)]">
           New Spin
         </h1>
+
+        {/* Summary badges */}
+        <div className="mb-4 text-sm flex flex-wrap gap-2 text-zinc-300">
+          <span>{totalArtists} artists</span>
+          <span>{totalAlbums} albums</span>
+          <span className="bg-red-600 text-white px-2 py-0.5 rounded-full text-xs font-semibold">
+            {newCount} new
+          </span>
+          <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs font-semibold">
+            {reissueCount} reissue
+          </span>
+        </div>
 
         <div className="overflow-x-auto rounded-xl shadow-lg ring-1 ring-zinc-700/50">
           <table className="w-full border-collapse">
@@ -54,7 +76,6 @@ export default function ReleaseTable() {
                   const hasSimilarArtist = artistReleases.some(
                     (r) => r.similar_artist
                   );
-
                   const artistStyle = artistInLibrary
                     ? "text-red-500"
                     : hasSimilarArtist
@@ -62,8 +83,10 @@ export default function ReleaseTable() {
                     : "text-zinc-300"; // default modern gray
 
                   const badgeCount = artistReleases.length;
+
                   return (
                     <React.Fragment key={artist}>
+                      {/* Artist row */}
                       <tr
                         className={`border-t border-zinc-700/50 transition-colors group ${
                           artistIndex % 2 === 0 ? "bg-zinc-900" : "bg-zinc-950"
@@ -100,8 +123,9 @@ export default function ReleaseTable() {
                         <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
                       </tr>
 
+                      {/* Album rows */}
                       {expandedArtists[artist] &&
-                        artistReleases.map((release, idx) => {
+                        artistReleases.map((release) => {
                           const albumStyle = release.album_in_library
                             ? "text-red-500"
                             : "text-zinc-400";
@@ -111,17 +135,17 @@ export default function ReleaseTable() {
 
                           return (
                             <tr
-                              key={idx}
+                              key={`${artist}-${release.album}`}
                               className={`border-t border-zinc-700/50 transition-colors group ${
-                                (artistIndex + idx + 1) % 2 === 0
+                                artistIndex % 2 === 0
                                   ? "bg-zinc-900"
                                   : "bg-zinc-950"
                               } hover:bg-red-900/30`}
                             >
                               <td
-                                className={`px-6 py-4 font-medium ${artistStyle}`}
+                                className={`px-6 py-4 font-medium ${artistStyle} pl-6`}
                               >
-                                &nbsp;&nbsp;{/* Indent for album row */}
+                                {/* Indent for album row */}
                               </td>
                               <td className={`px-6 py-4 ${albumStyle}`}>
                                 {release.album}
