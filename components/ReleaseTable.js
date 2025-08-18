@@ -1,9 +1,10 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function ReleaseTable() {
   const [releases, setReleases] = useState([]);
   const [expandedArtists, setExpandedArtists] = useState({});
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     fetch("/final_releases.json")
@@ -12,15 +13,13 @@ export default function ReleaseTable() {
       .catch((err) => console.error("Error loading releases:", err));
   }, []);
 
-  // Memoized grouping by artist
-  const grouped = useMemo(() => {
-    return releases.reduce((acc, release) => {
-      const artist = release.artist;
-      if (!acc[artist]) acc[artist] = [];
-      acc[artist].push(release);
-      return acc;
-    }, {});
-  }, [releases]);
+  // Group releases by artist
+  const grouped = releases.reduce((acc, release) => {
+    const artist = release.artist;
+    if (!acc[artist]) acc[artist] = [];
+    acc[artist].push(release);
+    return acc;
+  }, {});
 
   // Compute summary
   const totalArtists = Object.keys(grouped).length;
@@ -40,22 +39,26 @@ export default function ReleaseTable() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-900 to-black text-zinc-100 p-6">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold mb-4 text-center tracking-tight text-red-600 drop-shadow-[0_0_6px_rgba(139,0,0,0.5)]">
-          New Spin
-        </h1>
-
-        {/* Summary badges */}
-        <div className="mb-4 text-sm flex flex-wrap gap-2 text-zinc-300">
-          <span>{totalArtists} artists</span>
-          <span>{totalAlbums} albums</span>
-          <span className="bg-red-600 text-white px-2 py-0.5 rounded-full text-xs font-semibold">
-            {newCount} new
-          </span>
-          <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs font-semibold">
-            {reissueCount} reissue
-          </span>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-4xl font-bold tracking-tight text-red-600 drop-shadow-[0_0_6px_rgba(139,0,0,0.5)]">
+            New Spin
+          </h1>
+          <button
+            onClick={() => setShowHelp(true)}
+            className="text-sm text-zinc-300 hover:text-red-500 underline"
+          >
+            Help
+          </button>
         </div>
 
+        {/* Summary */}
+        <div className="mb-4 text-zinc-300 text-sm">
+          {totalArtists} artists, {totalAlbums} albums ({newCount} new,{" "}
+          {reissueCount} reissue)
+        </div>
+
+        {/* Table */}
         <div className="overflow-x-auto rounded-xl shadow-lg ring-1 ring-zinc-700/50">
           <table className="w-full border-collapse">
             <thead>
@@ -76,17 +79,17 @@ export default function ReleaseTable() {
                   const hasSimilarArtist = artistReleases.some(
                     (r) => r.similar_artist
                   );
+
                   const artistStyle = artistInLibrary
                     ? "text-red-500"
                     : hasSimilarArtist
                     ? "text-yellow-400"
-                    : "text-zinc-300"; // default modern gray
+                    : "text-zinc-300";
 
                   const badgeCount = artistReleases.length;
 
                   return (
                     <React.Fragment key={artist}>
-                      {/* Artist row */}
                       <tr
                         className={`border-t border-zinc-700/50 transition-colors group ${
                           artistIndex % 2 === 0 ? "bg-zinc-900" : "bg-zinc-950"
@@ -103,7 +106,6 @@ export default function ReleaseTable() {
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
-                            xmlns="http://www.w3.org/2000/svg"
                           >
                             <path
                               strokeLinecap="round"
@@ -123,9 +125,8 @@ export default function ReleaseTable() {
                         <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
                       </tr>
 
-                      {/* Album rows */}
                       {expandedArtists[artist] &&
-                        artistReleases.map((release) => {
+                        artistReleases.map((release, idx) => {
                           const albumStyle = release.album_in_library
                             ? "text-red-500"
                             : "text-zinc-400";
@@ -135,18 +136,18 @@ export default function ReleaseTable() {
 
                           return (
                             <tr
-                              key={`${artist}-${release.album}`}
+                              key={idx}
                               className={`border-t border-zinc-700/50 transition-colors group ${
-                                artistIndex % 2 === 0
+                                (artistIndex + idx + 1) % 2 === 0
                                   ? "bg-zinc-900"
                                   : "bg-zinc-950"
-                              } hover:bg-red-900/30 ${
-                                release.similar_artist ? "bg-yellow-900/20" : ""
-                              }`}
+                              } hover:bg-red-900/30`}
                             >
                               <td
-                                className={`px-6 py-4 font-medium ${artistStyle} pl-6`}
-                              ></td>
+                                className={`px-6 py-4 font-medium ${artistStyle}`}
+                              >
+                                &nbsp;&nbsp;
+                              </td>
                               <td className={`px-6 py-4 ${albumStyle}`}>
                                 {release.album}
                               </td>
@@ -178,6 +179,41 @@ export default function ReleaseTable() {
           </table>
         </div>
       </div>
+
+      {/* Help Modal */}
+      {showHelp && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50">
+          <div className="bg-zinc-900 rounded-xl shadow-xl max-w-lg w-full p-6 relative">
+            <button
+              onClick={() => setShowHelp(false)}
+              className="absolute top-3 right-3 text-zinc-400 hover:text-red-500"
+            >
+              ✕
+            </button>
+            <h2 className="text-xl font-bold mb-4 text-red-500">How to Use</h2>
+            <ul className="space-y-2 text-zinc-300 text-sm">
+              <li>o Click an artist row to expand and see albums.</li>
+              <li>o Red = in your library, Yellow = similar artist.</li>
+              <li>o Counts next to artist show how many albums.</li>
+              <li>
+                • Data comes from <code>final_releases.json</code>. Replace this
+                file to update.
+              </li>
+              <li>• New = red badge, Reissue = gray label.</li>
+            </ul>
+            <div className="mt-4">
+              <a
+                href="https://github.com/texas2pugs/new-spin-app/blob/main/README.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-zinc-400 hover:text-red-500 underline"
+              >
+                View full README.md
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
