@@ -115,9 +115,11 @@ export default function ReleaseTable() {
                             />
                           </svg>
                           {artist}
-                          <span className="ml-2 inline-flex items-center justify-center rounded-full bg-red-600 text-xs font-semibold px-2 py-0.5 text-white">
-                            {badgeCount}
-                          </span>
+                          {badgeCount > 1 && (
+                            <span className="ml-2 inline-flex items-center justify-center rounded-full bg-red-600 text-xs font-semibold px-2 py-0.5 text-white">
+                              {badgeCount}
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
                         <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
