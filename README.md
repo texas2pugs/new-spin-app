@@ -8,6 +8,7 @@ New Spin is a web app that helps you explore new music releases in an organized 
   - [Project Structure](#project-structure)
   - [License](#license)
   - [How to Update the Release List](#how-to-update-the-release-list)
+  - [Future Enhancements](#future-enhancements)
 
 ## Features
 
@@ -74,3 +75,29 @@ This project is provided for personal use. You may modify and adapt it to your o
    ```sh
    cp final_releases.json <path-to-public>/public/
    ```
+
+## Future Enhancements
+
+The following features are planned or under consideration for future releases:
+
+- **Starred Releases**
+  Allow users to "star" (or bookmark) new releases they want to track.
+
+  - Could be implemented with a simple checkbox or toggle button.
+  - Starred releases would be displayed in a dedicated section at the top for quick access.
+
+- **Search and Filter**
+  Add the ability to filter releases by artist, genre, or label, and quickly search within the list.
+
+- **Export / Share**
+  Support exporting the release list (or just starred releases) as CSV/JSON, or share via a link.
+
+- **Sorting Options**
+  Enable sorting releases by release type, label, or alphabetical order.
+
+- **UI Enhancements**
+  - Add dark/light mode toggle.
+  - Option to collapse/expand all artists at once.
+  - Improved visual cues for similar artists.
+
+These ideas are open to iteration and may be adjusted as the project evolves.
