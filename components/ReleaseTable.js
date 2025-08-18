@@ -4,13 +4,21 @@ import React, { useEffect, useState } from "react";
 export default function ReleaseTable() {
   const [releases, setReleases] = useState([]);
   const [expandedArtists, setExpandedArtists] = useState({});
+  const [favorites, setFavorites] = useState({});
   const [showHelp, setShowHelp] = useState(false);
 
+  // Load releases
   useEffect(() => {
     fetch("/final_releases.json")
       .then((res) => res.json())
       .then((data) => setReleases(data))
       .catch((err) => console.error("Error loading releases:", err));
+  }, []);
+
+  // Load favorites from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem("favorites");
+    if (stored) setFavorites(JSON.parse(stored));
   }, []);
 
   // Group releases by artist
@@ -34,6 +42,13 @@ export default function ReleaseTable() {
       ...prev,
       [artist]: !prev[artist],
     }));
+  };
+
+  const toggleFavorite = (artist, album) => {
+    const key = `${artist}::${album}`;
+    const updated = { ...favorites, [key]: !favorites[key] };
+    setFavorites(updated);
+    localStorage.setItem("favorites", JSON.stringify(updated));
   };
 
   return (
@@ -68,6 +83,7 @@ export default function ReleaseTable() {
                 <th className="px-6 py-4">Label</th>
                 <th className="px-6 py-4">Genre</th>
                 <th className="px-6 py-4">Type</th>
+                <th className="px-6 py-4">Favorite</th>
               </tr>
             </thead>
             <tbody>
@@ -84,79 +100,46 @@ export default function ReleaseTable() {
                     : hasSimilarArtist
                     ? "text-yellow-400"
                     : "text-zinc-300";
-
                   const badgeCount = artistReleases.length;
-                  const hasMultiple = badgeCount > 1;
 
-                  // Single-release artist: render inline (no chevron or collapse)
-                  if (!hasMultiple) {
-                    const release = artistReleases[0];
-                    const albumStyle = release.album_in_library
-                      ? "text-red-500"
-                      : "text-zinc-400";
+                  const singleRelease = artistReleases.length === 1;
 
-                    return (
-                      <tr
-                        key={artist}
-                        className={`border-t border-zinc-700/50 transition-colors ${
-                          artistIndex % 2 === 0 ? "bg-zinc-900" : "bg-zinc-950"
-                        } hover:bg-red-900/30`}
-                      >
-                        <td className={`px-6 py-4 font-medium ${artistStyle}`}>
-                          {artist}
-                        </td>
-                        <td className={`px-6 py-4 ${albumStyle}`}>
-                          {release.album}
-                        </td>
-                        <td className="px-6 py-4 text-zinc-400">
-                          {release.label}
-                        </td>
-                        <td className="px-6 py-4 text-zinc-400">
-                          {release.genre}
-                        </td>
-                        <td className="px-6 py-4">
-                          {release.release_type === "new" ? (
-                            <span className="inline-block bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-                              {release.release_type}
-                            </span>
-                          ) : (
-                            <span className="text-zinc-400">
-                              {release.release_type}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  }
-
-                  // Multi-release artist: collapsible header + child rows
                   return (
                     <React.Fragment key={artist}>
                       <tr
                         className={`border-t border-zinc-700/50 transition-colors group ${
                           artistIndex % 2 === 0 ? "bg-zinc-900" : "bg-zinc-950"
-                        } hover:bg-red-900/30 cursor-pointer`}
-                        onClick={() => toggleArtist(artist)}
+                        } ${
+                          !singleRelease
+                            ? "hover:bg-red-900/30 cursor-pointer"
+                            : ""
+                        }`}
+                        onClick={
+                          !singleRelease
+                            ? () => toggleArtist(artist)
+                            : undefined
+                        }
                       >
                         <td
                           className={`px-6 py-4 font-medium flex items-center ${artistStyle} group-hover:text-red-500`}
                         >
-                          {/* Chevron */}
-                          <svg
-                            className={`w-4 h-4 mr-2 transition-transform duration-200 ${
-                              expandedArtists[artist] ? "rotate-90" : ""
-                            }`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 5l7 7-7 7"
-                            />
-                          </svg>
+                          {!singleRelease && (
+                            <svg
+                              className={`w-4 h-4 mr-2 transition-transform duration-200 ${
+                                expandedArtists[artist] ? "rotate-90" : ""
+                              }`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 5l7 7-7 7"
+                              />
+                            </svg>
+                          )}
                           {artist}
                           {badgeCount > 1 && (
                             <span className="ml-2 inline-flex items-center justify-center rounded-full bg-red-600 text-xs font-semibold px-2 py-0.5 text-white">
@@ -164,23 +147,70 @@ export default function ReleaseTable() {
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
-                        <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
-                        <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
-                        <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
+                        {singleRelease ? (
+                          <>
+                            <td className="px-6 py-4">
+                              {artistReleases[0].album}
+                            </td>
+                            <td className="px-6 py-4 text-zinc-400">
+                              {artistReleases[0].label}
+                            </td>
+                            <td className="px-6 py-4 text-zinc-400">
+                              {artistReleases[0].genre}
+                            </td>
+                            <td className="px-6 py-4">
+                              {artistReleases[0].release_type === "new" ? (
+                                <span className="inline-block bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                                  {artistReleases[0].release_type}
+                                </span>
+                              ) : (
+                                <span className="text-zinc-400">
+                                  {artistReleases[0].release_type}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              <input
+                                type="checkbox"
+                                checked={
+                                  favorites[
+                                    `${artist}::${artistReleases[0].album}`
+                                  ] || false
+                                }
+                                onChange={() =>
+                                  toggleFavorite(
+                                    artist,
+                                    artistReleases[0].album
+                                  )
+                                }
+                              />
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
+                            <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
+                            <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
+                            <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
+                            <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
+                          </>
+                        )}
                       </tr>
 
-                      {expandedArtists[artist] &&
+                      {!singleRelease &&
+                        expandedArtists[artist] &&
                         artistReleases.map((release, idx) => {
                           const albumStyle = release.album_in_library
                             ? "text-red-500"
                             : "text-zinc-400";
-                          const childArtistStyle = release.artist_in_library
+                          const artistStyle = release.artist_in_library
                             ? "text-red-500"
                             : "text-zinc-300";
+                          const key = `${artist}::${release.album}`;
+
                           return (
                             <tr
-                              key={`${artist}-${idx}`}
+                              key={idx}
                               className={`border-t border-zinc-700/50 transition-colors group ${
                                 (artistIndex + idx + 1) % 2 === 0
                                   ? "bg-zinc-900"
@@ -188,7 +218,7 @@ export default function ReleaseTable() {
                               } hover:bg-red-900/30`}
                             >
                               <td
-                                className={`px-6 py-4 font-medium ${childArtistStyle}`}
+                                className={`px-6 py-4 font-medium ${artistStyle}`}
                               >
                                 &nbsp;&nbsp;
                               </td>
@@ -211,6 +241,15 @@ export default function ReleaseTable() {
                                     {release.release_type}
                                   </span>
                                 )}
+                              </td>
+                              <td className="px-6 py-4">
+                                <input
+                                  type="checkbox"
+                                  checked={favorites[key] || false}
+                                  onChange={() =>
+                                    toggleFavorite(artist, release.album)
+                                  }
+                                />
                               </td>
                             </tr>
                           );
@@ -236,12 +275,9 @@ export default function ReleaseTable() {
             </button>
             <h2 className="text-xl font-bold mb-4 text-red-500">How to Use</h2>
             <ul className="space-y-2 text-zinc-300 text-sm">
-              <li>
-                o Click an artist row to expand and see albums (for artists with
-                multiple releases).
-              </li>
-              <li>o Artists with one release show inline automatically.</li>
+              <li>o Click an artist row to expand and see albums.</li>
               <li>o Red = in your library, Yellow = similar artist.</li>
+              <li>o Counts next to artist show how many albums.</li>
               <li>
                 • Data comes from <code>final_releases.json</code>. Replace this
                 file to update.
