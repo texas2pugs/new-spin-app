@@ -79,7 +79,6 @@ export default function ReleaseTable() {
                   const hasSimilarArtist = artistReleases.some(
                     (r) => r.similar_artist
                   );
-
                   const artistStyle = artistInLibrary
                     ? "text-red-500"
                     : hasSimilarArtist
@@ -87,7 +86,50 @@ export default function ReleaseTable() {
                     : "text-zinc-300";
 
                   const badgeCount = artistReleases.length;
+                  const hasMultiple = badgeCount > 1;
 
+                  // Single-release artist: render inline (no chevron or collapse)
+                  if (!hasMultiple) {
+                    const release = artistReleases[0];
+                    const albumStyle = release.album_in_library
+                      ? "text-red-500"
+                      : "text-zinc-400";
+
+                    return (
+                      <tr
+                        key={artist}
+                        className={`border-t border-zinc-700/50 transition-colors ${
+                          artistIndex % 2 === 0 ? "bg-zinc-900" : "bg-zinc-950"
+                        } hover:bg-red-900/30`}
+                      >
+                        <td className={`px-6 py-4 font-medium ${artistStyle}`}>
+                          {artist}
+                        </td>
+                        <td className={`px-6 py-4 ${albumStyle}`}>
+                          {release.album}
+                        </td>
+                        <td className="px-6 py-4 text-zinc-400">
+                          {release.label}
+                        </td>
+                        <td className="px-6 py-4 text-zinc-400">
+                          {release.genre}
+                        </td>
+                        <td className="px-6 py-4">
+                          {release.release_type === "new" ? (
+                            <span className="inline-block bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                              {release.release_type}
+                            </span>
+                          ) : (
+                            <span className="text-zinc-400">
+                              {release.release_type}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  // Multi-release artist: collapsible header + child rows
                   return (
                     <React.Fragment key={artist}>
                       <tr
@@ -99,6 +141,7 @@ export default function ReleaseTable() {
                         <td
                           className={`px-6 py-4 font-medium flex items-center ${artistStyle} group-hover:text-red-500`}
                         >
+                          {/* Chevron */}
                           <svg
                             className={`w-4 h-4 mr-2 transition-transform duration-200 ${
                               expandedArtists[artist] ? "rotate-90" : ""
@@ -132,13 +175,12 @@ export default function ReleaseTable() {
                           const albumStyle = release.album_in_library
                             ? "text-red-500"
                             : "text-zinc-400";
-                          const artistStyle = release.artist_in_library
+                          const childArtistStyle = release.artist_in_library
                             ? "text-red-500"
                             : "text-zinc-300";
-
                           return (
                             <tr
-                              key={idx}
+                              key={`${artist}-${idx}`}
                               className={`border-t border-zinc-700/50 transition-colors group ${
                                 (artistIndex + idx + 1) % 2 === 0
                                   ? "bg-zinc-900"
@@ -146,7 +188,7 @@ export default function ReleaseTable() {
                               } hover:bg-red-900/30`}
                             >
                               <td
-                                className={`px-6 py-4 font-medium ${artistStyle}`}
+                                className={`px-6 py-4 font-medium ${childArtistStyle}`}
                               >
                                 &nbsp;&nbsp;
                               </td>
@@ -194,9 +236,12 @@ export default function ReleaseTable() {
             </button>
             <h2 className="text-xl font-bold mb-4 text-red-500">How to Use</h2>
             <ul className="space-y-2 text-zinc-300 text-sm">
-              <li>o Click an artist row to expand and see albums.</li>
+              <li>
+                o Click an artist row to expand and see albums (for artists with
+                multiple releases).
+              </li>
+              <li>o Artists with one release show inline automatically.</li>
               <li>o Red = in your library, Yellow = similar artist.</li>
-              <li>o Counts next to artist show how many albums.</li>
               <li>
                 • Data comes from <code>final_releases.json</code>. Replace this
                 file to update.
