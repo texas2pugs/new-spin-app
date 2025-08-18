@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# New Spin App
+
+New Spin is a web app that helps you explore new music releases in an organized way. It loads release data from a JSON file, groups albums by artist, and highlights whether artists or albums are already in your library. You can quickly expand/collapse artist sections, see release counts, and distinguish new releases from reissues. Similar artists are highlighted, and a built-in Help guide explains how to update and use the app.
+
+- [New Spin App](#new-spin-app)
+  - [Features](#features)
+  - [Getting Started](#getting-started)
+  - [Project Structure](#project-structure)
+  - [License](#license)
+  - [How to Update the Release List](#how-to-update-the-release-list)
+
+## Features
+
+- Grouped by Artist – Expand or collapse each artist to view their albums.
+- Release Counts – See total artists, albums, and breakdown of new vs. reissue.
+- Visual Highlights – Artists/albums in your library show in red; similar artists in yellow.
+- Album Details – View label, genre, and release type (with badges for new releases).
+- Expand/Collapse All – Quickly toggle all artist groups open or closed.
+- Built-in Help – Access usage instructions and details on updating the release list.
 
 ## Getting Started
 
-First, run the development server:
+1. Install dependencies:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+   ```bash
+   npm install
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. Start the development server:
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+   ```bash
+   npm run dev
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Open browser and visit:
 
-## Learn More
+   ```text
+   http://localhost:3000
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `components/ReleaseTable.js` - main UI component that renders the release list
+- `public/final-releases.json` - the dataset of releases (artists, albums, etc.)
+- `README.md` - documentation for the project
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
+This project is provided for personal use. You may modify and adapt it to your own needs.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## How to Update the Release List
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. From Apple Music, export the music library to Library.xml
+1. Convert the XML to JSON
+
+   ```sh
+   python3 convert_library.py
+   ```
+
+1. Generate a new JSON scrape of new releases
+
+   ```sh
+   python3 scrape-releases.py
+   ```
+
+1. Merge the two JSON files to create `final_releases.json`
+
+   ```sh
+   python3 merge_lib_new.py
+   ```
+
+1. Copy to `public/`
+
+   ```sh
+   cp final_releases.json <path-to-public>/public/
+   ```
