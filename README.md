@@ -80,12 +80,6 @@ This project is provided for personal use. You may modify and adapt it to your o
 
 The following features are planned or under consideration for future releases:
 
-- **Starred Releases**
-  Allow users to "star" (or bookmark) new releases they want to track.
-
-  - Could be implemented with a simple checkbox or toggle button.
-  - Starred releases would be displayed in a dedicated section at the top for quick access.
-
 - **Search and Filter**
   Add the ability to filter releases by artist, genre, or label, and quickly search within the list.
 
