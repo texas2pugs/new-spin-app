@@ -196,7 +196,9 @@ export default function ReleaseTable() {
                           artistIndex
                         )} border-t border-zinc-700/50`}
                       >
-                        <td className={`px-6 py-4 font-medium ${artistStyle}`}>
+                        <td
+                          className={`px-6 py-4 font-medium ${artistStyle} pl-12`}
+                        >
                           {artist}
                         </td>
                         <td className={`px-6 py-4 ${albumStyle}`}>
