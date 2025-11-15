@@ -10,7 +10,11 @@ export default function ReleaseTable() {
   useEffect(() => {
     fetch("/final_releases.json")
       .then((res) => res.json())
-      .then((data) => setReleases(data))
+      .then((data) =>
+        setReleases(
+          data.filter((r) => !(r.artist_in_library && r.album_in_library))
+        )
+      )
       .catch((err) => console.error("Error loading releases:", err));
 
     const savedFavorites = localStorage.getItem("favorites");
