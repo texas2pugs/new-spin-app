@@ -67,7 +67,10 @@ export default function ReleaseTable() {
   ).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-900 to-black text-zinc-100 p-6">
+    <div
+      id="top"
+      className="min-h-screen bg-gradient-to-b from-zinc-900 to-black text-zinc-100 p-6"
+    >
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -409,6 +412,15 @@ export default function ReleaseTable() {
               )}
             </tbody>
           </table>
+        </div>
+        {/* Back to Top */}
+        <div className="mt-10 text-center">
+          <a
+            href="#top"
+            className="text-sm text-zinc-400 hover:text-red-500 underline"
+          >
+            Back to Top ▲
+          </a>
         </div>
       </div>
 
