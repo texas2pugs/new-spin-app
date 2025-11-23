@@ -6,16 +6,16 @@ export default function ReleaseTable() {
   const [expandedArtists, setExpandedArtists] = useState({});
   const [favorites, setFavorites] = useState({});
   const [showHelp, setShowHelp] = useState(false);
+  const [releaseWeek, setReleaseWeek] = useState(null);
 
   useEffect(() => {
     fetch("/final_releases.json")
       .then((res) => res.json())
-      .then((data) =>
+      .then((data) => {
+        setReleaseWeek(data.release_week || null);
         // remove releases where both artist and album are already in your library
-        setReleases(
-          data.filter((r) => !(r.artist_in_library && r.album_in_library))
-        )
-      )
+        setReleases(data.items || []);
+      })
       .catch((err) => console.error("Error loading releases:", err));
 
     const savedFavorites = localStorage.getItem("favorites");
@@ -104,10 +104,17 @@ export default function ReleaseTable() {
     >
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-4xl font-bold tracking-tight text-red-600 drop-shadow-[0_0_6px_rgba(139,0,0,0.5)]">
-            New Spin
-          </h1>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight text-red-600 drop-shadow-[0_0_6px_rgba(139,0,0,0.5)]">
+              New Spin
+            </h1>
+
+            {releaseWeek && (
+              <div className="text-sm text-zinc-400 mt-1">{releaseWeek}</div>
+            )}
+          </div>
+
           <button
             onClick={() => setShowHelp(true)}
             className="text-sm text-zinc-300 hover:text-red-500 underline"
