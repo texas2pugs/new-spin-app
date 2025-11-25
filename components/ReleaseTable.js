@@ -92,20 +92,34 @@ export default function ReleaseTable() {
     if (similar.length === 0) return null;
 
     const key = `${release.artist}::${release.album}`;
-    const percent = release.recommendation_score
-      ? Math.round(release.recommendation_score * 100)
-      : Math.round(
-          (similar.length / (release.similar_albums_total || similar.length)) *
-            100
-        );
+    const score = release.recommendation_score || 0; // Keeping score for percentage calculation
 
+    // --- START NEW MATCH-COUNT LOGIC ---
+    const matchCount = similar.length;
+    let matchLabel = "Recommended"; // Default (shouldn't be hit if logic is sound)
+
+    if (matchCount >= 10) {
+      matchLabel = "Strong Match";
+    } else if (matchCount >= 5) {
+      matchLabel = "Mild Match";
+    } else {
+      // Under 5 matches
+      matchLabel = "Weak Match";
+    }
+    // --- END NEW MATCH-COUNT LOGIC ---
+
+    const percent = Math.round(score * 100);
+
+    // NOTE: Simplified star logic using the recommendation_score percentage,
+    // as requested (keeping the percentage as is).
     const stars = "★★★★★";
     const filled = Math.round((percent / 100) * 5);
 
     return (
       <div className="mt-1 ml-2 text-sm text-yellow-300">
         <div>
-          Recommended{" "}
+          {/* USE THE NEW matchLabel HERE */}
+          {matchLabel}{" "}
           <span className="text-yellow-400">
             {stars.slice(0, filled)}
             <span className="text-zinc-600">{stars.slice(filled)}</span>
@@ -152,7 +166,7 @@ export default function ReleaseTable() {
         <td
           className={`px-6 py-4 font-medium ${
             release.artist_in_library
-              ? "text-red-500"
+              ? "text-zinc-300"
               : release.similar_artist
               ? "text-yellow-400"
               : "text-zinc-300"
@@ -219,15 +233,21 @@ export default function ReleaseTable() {
 
         {/* Tables */}
         {[
-          ["⭐ Marked Releases", favoriteReleases, true],
+          ["⭐ Marked Releases", favoriteReleases, true, false],
           [
             "🎵 Releases from my artists",
-            Object.values(groupedPriority).flat(),
+            Object.values(groupedPriority),
+            false,
+            true,
+          ],
+          [
+            "📀 All Other Releases",
+            Object.values(groupedMain).flat(),
+            false,
             false,
           ],
-          ["📀 All Other Releases", Object.values(groupedMain).flat(), false],
         ].map(
-          ([title, list, isFavoriteSection], tableIdx) =>
+          ([title, list, isFavoriteSection, isGrouped], tableIdx) =>
             list.length > 0 && (
               <div
                 key={tableIdx}
@@ -256,11 +276,25 @@ export default function ReleaseTable() {
                     </tr>
                   </thead>
                   <tbody>
-                    {list.map((release, idx) => (
-                      <React.Fragment key={idx}>
-                        {renderReleaseRow(release, idx)}
-                      </React.Fragment>
-                    ))}
+                    {isGrouped
+                      ? list.map((artistReleases, artistIdx) => (
+                          <React.Fragment key={artistIdx}>
+                            {artistReleases.map((release, releaseIdx) => (
+                              <React.Fragment key={releaseIdx}>
+                                {/* Calculate index for correct row banding */}
+                                {renderReleaseRow(
+                                  release,
+                                  artistIdx * artistReleases.length + releaseIdx
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </React.Fragment>
+                        ))
+                      : list.map((release, idx) => (
+                          <React.Fragment key={idx}>
+                            {renderReleaseRow(release, idx)}
+                          </React.Fragment>
+                        ))}
                   </tbody>
                 </table>
               </div>
