@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 
 export default function ReleaseTable() {
   const [releases, setReleases] = useState([]);
-  const [expandedArtists, setExpandedArtists] = useState({});
+  const [expandedSimilar, setExpandedSimilar] = useState({});
   const [favorites, setFavorites] = useState({});
   const [showHelp, setShowHelp] = useState(false);
   const [releaseWeek, setReleaseWeek] = useState(null);
@@ -13,7 +13,6 @@ export default function ReleaseTable() {
       .then((res) => res.json())
       .then((data) => {
         setReleaseWeek(data.release_week || null);
-        // remove releases where both artist and album are already in your library
         setReleases(data.items || []);
       })
       .catch((err) => console.error("Error loading releases:", err));
@@ -22,10 +21,10 @@ export default function ReleaseTable() {
     if (savedFavorites) setFavorites(JSON.parse(savedFavorites));
   }, []);
 
-  const toggleArtist = (artist) => {
-    setExpandedArtists((prev) => ({
+  const toggleSimilar = (key) => {
+    setExpandedSimilar((prev) => ({
       ...prev,
-      [artist]: !prev[artist],
+      [key]: !prev[key],
     }));
   };
 
@@ -36,7 +35,6 @@ export default function ReleaseTable() {
     localStorage.setItem("favorites", JSON.stringify(newFavorites));
   };
 
-  // helper: background classes
   const getRowBg = (isFavorite, index) => {
     if (isFavorite) return "bg-blue-500/30";
     return index % 2 === 0
@@ -44,23 +42,18 @@ export default function ReleaseTable() {
       : "bg-zinc-950 hover:bg-red-900/30";
   };
 
-  // visible releases = releases after removing fully-owned (already applied on load)
   const visibleReleases = releases;
 
-  // favorites keys set
   const favoriteKeys = new Set(
     Object.entries(favorites)
       .filter(([_, v]) => v)
       .map(([k]) => k)
   );
 
-  // favorite releases (only from visible releases)
   const favoriteReleases = visibleReleases.filter((r) =>
     favoriteKeys.has(`${r.artist}::${r.album}`)
   );
 
-  // Priority releases: artist in library but album not in library
-  // Exclude favorites (favorites override other sections)
   const priorityReleases = visibleReleases.filter(
     (r) =>
       r.artist_in_library &&
@@ -68,14 +61,12 @@ export default function ReleaseTable() {
       !favoriteKeys.has(`${r.artist}::${r.album}`)
   );
 
-  // Main releases (everything else), excluding favorites and excluding priority releases
   const mainReleasesList = visibleReleases.filter(
     (r) =>
       !favoriteKeys.has(`${r.artist}::${r.album}`) &&
       !(r.artist_in_library && !r.album_in_library)
   );
 
-  // Helper to group by artist (preserves insertion order)
   const groupByArtist = (items) =>
     items.reduce((acc, release) => {
       const artist = release.artist;
@@ -87,7 +78,6 @@ export default function ReleaseTable() {
   const groupedPriority = groupByArtist(priorityReleases);
   const groupedMain = groupByArtist(mainReleasesList);
 
-  // Summary counts — counts are over visibleReleases (after fully-owned filter)
   const totalArtists = new Set(visibleReleases.map((r) => r.artist)).size;
   const totalAlbums = visibleReleases.length;
   const newCount = visibleReleases.filter(
@@ -96,6 +86,104 @@ export default function ReleaseTable() {
   const reissueCount = visibleReleases.filter(
     (r) => r.release_type === "reissue"
   ).length;
+
+  const renderSimilarSection = (release) => {
+    const similar = release.similar_albums || [];
+    if (similar.length === 0) return null;
+
+    const key = `${release.artist}::${release.album}`;
+    const percent = release.recommendation_score
+      ? Math.round(release.recommendation_score * 100)
+      : Math.round(
+          (similar.length / (release.similar_albums_total || similar.length)) *
+            100
+        );
+
+    const stars = "★★★★★";
+    const filled = Math.round((percent / 100) * 5);
+
+    return (
+      <div className="mt-1 ml-2 text-sm text-yellow-300">
+        <div>
+          Recommended{" "}
+          <span className="text-yellow-400">
+            {stars.slice(0, filled)}
+            <span className="text-zinc-600">{stars.slice(filled)}</span>
+          </span>{" "}
+          ({percent}%)
+        </div>
+
+        <div
+          onClick={() => toggleSimilar(key)}
+          className="cursor-pointer text-yellow-400 hover:text-yellow-200 ml-4"
+        >
+          ↳ View similar albums ({similar.length} match
+          {similar.length !== 1 ? "es" : ""})
+        </div>
+
+        {expandedSimilar[key] && (
+          <ul className="ml-8 mt-1 text-zinc-300 list-disc">
+            {similar.map((a, idx) => (
+              <li key={idx}>
+                {a.artist} – {a.album}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  };
+
+  const renderReleaseRow = (release, rowIndex) => {
+    const albumStyle = release.album_in_library
+      ? "text-red-500"
+      : "text-zinc-400";
+    const key = `${release.artist}::${release.album}`;
+    const isFavorite = favorites[key];
+
+    return (
+      <tr
+        key={key}
+        className={`${getRowBg(
+          isFavorite,
+          rowIndex
+        )} border-t border-zinc-700/50 align-top`}
+      >
+        <td
+          className={`px-6 py-4 font-medium ${
+            release.artist_in_library
+              ? "text-red-500"
+              : release.similar_artist
+              ? "text-yellow-400"
+              : "text-zinc-300"
+          }`}
+        >
+          <div>{release.artist}</div>
+          {renderSimilarSection(release)}
+        </td>
+
+        <td className={`px-6 py-4 ${albumStyle}`}>{release.album}</td>
+        <td className="px-6 py-4 text-zinc-400">{release.label}</td>
+        <td className="px-6 py-4 text-zinc-400">{release.genre}</td>
+        <td className="px-6 py-4">
+          {release.release_type === "new" ? (
+            <span className="inline-block bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+              {release.release_type}
+            </span>
+          ) : (
+            <span className="text-zinc-400">{release.release_type}</span>
+          )}
+        </td>
+        <td className="px-6 py-4">
+          <input
+            type="checkbox"
+            checked={favorites[key] || false}
+            onChange={() => toggleFavorite(release.artist, release.album)}
+          />
+        </td>
+      </tr>
+    );
+  };
 
   return (
     <div
@@ -129,490 +217,55 @@ export default function ReleaseTable() {
           {reissueCount} reissue)
         </div>
 
-        {/* ---------------------- */}
-        {/* 1) Favorites Table     */}
-        {/* ---------------------- */}
-        {favoriteReleases.length > 0 && (
-          <>
-            <h2 className="text-lg font-semibold text-red-400 mb-2 flex items-center gap-2">
-              <span>⭐ Marked Releases</span>
-            </h2>
-
-            <div className="mb-8 overflow-x-auto rounded-xl shadow-lg ring-1 ring-zinc-700/50">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-zinc-800 text-left text-sm uppercase tracking-wider text-red-500">
-                    <th className="px-6 py-4">Artist</th>
-                    <th className="px-6 py-4">Album</th>
-                    <th className="px-6 py-4">Label</th>
-                    <th className="px-6 py-4">Genre</th>
-                    <th className="px-6 py-4">Type</th>
-                    <th className="px-6 py-4">Favorite</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {favoriteReleases.map((release, idx) => {
-                    const artistStyle = release.artist_in_library
-                      ? "text-red-500"
-                      : release.similar_artist
+        {/* Tables */}
+        {[
+          ["⭐ Marked Releases", favoriteReleases, true],
+          [
+            "🎵 Releases from my artists",
+            Object.values(groupedPriority).flat(),
+            false,
+          ],
+          ["📀 All Other Releases", Object.values(groupedMain).flat(), false],
+        ].map(
+          ([title, list, isFavoriteSection], tableIdx) =>
+            list.length > 0 && (
+              <div
+                key={tableIdx}
+                className="mb-8 overflow-x-auto rounded-xl shadow-lg ring-1 ring-zinc-700/50"
+              >
+                <h2
+                  className={`text-lg font-semibold mb-2 flex items-center gap-2 ${
+                    isFavoriteSection
+                      ? "text-red-400"
+                      : tableIdx === 1
                       ? "text-yellow-400"
-                      : "text-zinc-300";
-                    const albumStyle = release.album_in_library
-                      ? "text-red-500"
-                      : "text-zinc-400";
-                    const key = `${release.artist}::${release.album}`;
-                    return (
-                      <tr
-                        key={idx}
-                        className={`${getRowBg(
-                          true,
-                          idx
-                        )} border-t border-zinc-700/50`}
-                      >
-                        <td className={`px-6 py-4 font-medium ${artistStyle}`}>
-                          {release.artist}
-                        </td>
-                        <td className={`px-6 py-4 ${albumStyle}`}>
-                          {release.album}
-                        </td>
-                        <td className="px-6 py-4 text-zinc-400">
-                          {release.label}
-                        </td>
-                        <td className="px-6 py-4 text-zinc-400">
-                          {release.genre}
-                        </td>
-                        <td className="px-6 py-4">
-                          {release.release_type === "new" ? (
-                            <span className="inline-block bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-                              {release.release_type}
-                            </span>
-                          ) : (
-                            <span className="text-zinc-400">
-                              {release.release_type}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <input
-                            type="checkbox"
-                            checked={favorites[key] || false}
-                            onChange={() =>
-                              toggleFavorite(release.artist, release.album)
-                            }
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </>
+                      : "text-zinc-300"
+                  }`}
+                >
+                  <span>{title}</span>
+                </h2>
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-zinc-800 text-left text-sm uppercase tracking-wider text-red-500">
+                      <th className="px-6 py-4">Artist</th>
+                      <th className="px-6 py-4">Album</th>
+                      <th className="px-6 py-4">Label</th>
+                      <th className="px-6 py-4">Genre</th>
+                      <th className="px-6 py-4">Type</th>
+                      <th className="px-6 py-4">Favorite</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {list.map((release, idx) => (
+                      <React.Fragment key={idx}>
+                        {renderReleaseRow(release, idx)}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
         )}
-
-        {/* ---------------------- */}
-        {/* 2) Priority Table      */}
-        {/* ---------------------- */}
-        {Object.keys(groupedPriority).length > 0 && (
-          <>
-            <h2 className="text-lg font-semibold text-yellow-400 mb-2 flex items-center gap-2">
-              <span>🎵 Releases from my artists</span>
-            </h2>
-
-            <div className="mb-8 overflow-x-auto rounded-xl shadow-lg ring-1 ring-zinc-700/50">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-zinc-800 text-left text-sm uppercase tracking-wider text-red-500">
-                    <th className="px-6 py-4">Artist</th>
-                    <th className="px-6 py-4">Album</th>
-                    <th className="px-6 py-4">Label</th>
-                    <th className="px-6 py-4">Genre</th>
-                    <th className="px-6 py-4">Type</th>
-                    <th className="px-6 py-4">Favorite</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(groupedPriority).map(
-                    ([artist, artistReleases], artistIndex) => {
-                      // Single release case
-                      if (artistReleases.length === 1) {
-                        const release = artistReleases[0];
-                        const albumStyle = release.album_in_library
-                          ? "text-red-500"
-                          : "text-zinc-400";
-                        const key = `${release.artist}::${release.album}`;
-                        const isFavorite = favorites[key];
-                        return (
-                          <tr
-                            key={artist}
-                            className={`${getRowBg(
-                              isFavorite,
-                              artistIndex
-                            )} border-t border-zinc-700/50`}
-                          >
-                            <td
-                              className={`px-6 py-4 font-medium ${
-                                release.artist_in_library
-                                  ? "text-red-500"
-                                  : release.similar_artist
-                                  ? "text-yellow-400"
-                                  : "text-zinc-300"
-                              } pl-12`}
-                            >
-                              {artist}
-                            </td>
-                            <td className={`px-6 py-4 ${albumStyle}`}>
-                              {release.album}
-                            </td>
-                            <td className="px-6 py-4 text-zinc-400">
-                              {release.label}
-                            </td>
-                            <td className="px-6 py-4 text-zinc-400">
-                              {release.genre}
-                            </td>
-                            <td className="px-6 py-4">
-                              {release.release_type === "new" ? (
-                                <span className="inline-block bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-                                  {release.release_type}
-                                </span>
-                              ) : (
-                                <span className="text-zinc-400">
-                                  {release.release_type}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4">
-                              <input
-                                type="checkbox"
-                                checked={favorites[key] || false}
-                                onChange={() =>
-                                  toggleFavorite(release.artist, release.album)
-                                }
-                              />
-                            </td>
-                          </tr>
-                        );
-                      }
-
-                      // Multiple releases: group with collapse
-                      const badgeCount = artistReleases.length;
-                      return (
-                        <React.Fragment key={artist}>
-                          <tr
-                            className={`${
-                              artistIndex % 2 === 0
-                                ? "bg-zinc-900"
-                                : "bg-zinc-950"
-                            } border-t border-zinc-700/50 hover:bg-red-900/30 cursor-pointer`}
-                            onClick={() => toggleArtist(artist)}
-                          >
-                            <td
-                              className={`px-6 py-4 font-medium flex items-center ${
-                                artistReleases.some((r) => r.artist_in_library)
-                                  ? "text-red-500"
-                                  : artistReleases.some((r) => r.similar_artist)
-                                  ? "text-yellow-400"
-                                  : "text-zinc-300"
-                              } group-hover:text-red-500`}
-                            >
-                              <svg
-                                className={`w-4 h-4 mr-2 transition-transform duration-200 ${
-                                  expandedArtists[artist] ? "rotate-90" : ""
-                                }`}
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 5l7 7-7 7"
-                                />
-                              </svg>
-                              {artist}
-                              {badgeCount > 1 && (
-                                <span className="ml-2 inline-flex items-center justify-center rounded-full bg-red-600 text-xs font-semibold px-2 py-0.5 text-white">
-                                  {badgeCount}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
-                            <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
-                            <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
-                            <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
-                            <td className="px-6 py-4">&nbsp;</td>
-                          </tr>
-
-                          {expandedArtists[artist] &&
-                            artistReleases.map((release, idx) => {
-                              const albumStyle = release.album_in_library
-                                ? "text-red-500"
-                                : "text-zinc-400";
-                              const key = `${release.artist}::${release.album}`;
-                              const isFavorite = favorites[key];
-                              return (
-                                <tr
-                                  key={idx}
-                                  className={`${getRowBg(
-                                    isFavorite,
-                                    artistIndex + idx + 1
-                                  )} border-t border-zinc-700/50`}
-                                >
-                                  <td
-                                    className={`px-6 py-4 font-medium ${
-                                      release.artist_in_library
-                                        ? "text-red-500"
-                                        : release.similar_artist
-                                        ? "text-yellow-400"
-                                        : "text-zinc-300"
-                                    }`}
-                                  >
-                                    &nbsp;&nbsp;
-                                  </td>
-                                  <td className={`px-6 py-4 ${albumStyle}`}>
-                                    {release.album}
-                                  </td>
-                                  <td className="px-6 py-4 text-zinc-400">
-                                    {release.label}
-                                  </td>
-                                  <td className="px-6 py-4 text-zinc-400">
-                                    {release.genre}
-                                  </td>
-                                  <td className="px-6 py-4">
-                                    {release.release_type === "new" ? (
-                                      <span className="inline-block bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-                                        {release.release_type}
-                                      </span>
-                                    ) : (
-                                      <span className="text-zinc-400">
-                                        {release.release_type}
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="px-6 py-4">
-                                    <input
-                                      type="checkbox"
-                                      checked={favorites[key] || false}
-                                      onChange={() =>
-                                        toggleFavorite(
-                                          release.artist,
-                                          release.album
-                                        )
-                                      }
-                                    />
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                        </React.Fragment>
-                      );
-                    }
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-
-        {/* ---------------------- */}
-        {/* 3) Main Table         */}
-        {/* ---------------------- */}
-        <h2 className="text-lg font-semibold text-zinc-300 mb-2 flex items-center gap-2">
-          <span>📀 All Other Releases</span>
-        </h2>
-
-        <div className="overflow-x-auto rounded-xl shadow-lg ring-1 ring-zinc-700/50">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-zinc-800 text-left text-sm uppercase tracking-wider text-red-500">
-                <th className="px-6 py-4">Artist</th>
-                <th className="px-6 py-4">Album</th>
-                <th className="px-6 py-4">Label</th>
-                <th className="px-6 py-4">Genre</th>
-                <th className="px-6 py-4">Type</th>
-                <th className="px-6 py-4">Favorite</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(groupedMain).map(
-                ([artist, artistReleases], artistIndex) => {
-                  // Single release
-                  if (artistReleases.length === 1) {
-                    const release = artistReleases[0];
-                    const albumStyle = release.album_in_library
-                      ? "text-red-500"
-                      : "text-zinc-400";
-                    const key = `${release.artist}::${release.album}`;
-                    const isFavorite = favorites[key];
-                    return (
-                      <tr
-                        key={artist}
-                        className={`${getRowBg(
-                          isFavorite,
-                          artistIndex
-                        )} border-t border-zinc-700/50`}
-                      >
-                        <td
-                          className={`px-6 py-4 font-medium ${
-                            release.artist_in_library
-                              ? "text-red-500"
-                              : release.similar_artist
-                              ? "text-yellow-400"
-                              : "text-zinc-300"
-                          } pl-12`}
-                        >
-                          {artist}
-                        </td>
-                        <td className={`px-6 py-4 ${albumStyle}`}>
-                          {release.album}
-                        </td>
-                        <td className="px-6 py-4 text-zinc-400">
-                          {release.label}
-                        </td>
-                        <td className="px-6 py-4 text-zinc-400">
-                          {release.genre}
-                        </td>
-                        <td className="px-6 py-4">
-                          {release.release_type === "new" ? (
-                            <span className="inline-block bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-                              {release.release_type}
-                            </span>
-                          ) : (
-                            <span className="text-zinc-400">
-                              {release.release_type}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <input
-                            type="checkbox"
-                            checked={favorites[key] || false}
-                            onChange={() =>
-                              toggleFavorite(release.artist, release.album)
-                            }
-                          />
-                        </td>
-                      </tr>
-                    );
-                  }
-
-                  // Multiple releases
-                  const badgeCount = artistReleases.length;
-                  return (
-                    <React.Fragment key={artist}>
-                      <tr
-                        className={`${
-                          artistIndex % 2 === 0 ? "bg-zinc-900" : "bg-zinc-950"
-                        } border-t border-zinc-700/50 hover:bg-red-900/30 cursor-pointer`}
-                        onClick={() => toggleArtist(artist)}
-                      >
-                        <td
-                          className={`px-6 py-4 font-medium flex items-center ${
-                            artistReleases.some((r) => r.artist_in_library)
-                              ? "text-red-500"
-                              : artistReleases.some((r) => r.similar_artist)
-                              ? "text-yellow-400"
-                              : "text-zinc-300"
-                          } group-hover:text-red-500`}
-                        >
-                          <svg
-                            className={`w-4 h-4 mr-2 transition-transform duration-200 ${
-                              expandedArtists[artist] ? "rotate-90" : ""
-                            }`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 5l7 7-7 7"
-                            />
-                          </svg>
-                          {artist}
-                          {badgeCount > 1 && (
-                            <span className="ml-2 inline-flex items-center justify-center rounded-full bg-red-600 text-xs font-semibold px-2 py-0.5 text-white">
-                              {badgeCount}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
-                        <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
-                        <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
-                        <td className="px-6 py-4 text-zinc-400">&nbsp;</td>
-                        <td className="px-6 py-4">&nbsp;</td>
-                      </tr>
-
-                      {expandedArtists[artist] &&
-                        artistReleases.map((release, idx) => {
-                          const albumStyle = release.album_in_library
-                            ? "text-red-500"
-                            : "text-zinc-400";
-                          const key = `${release.artist}::${release.album}`;
-                          const isFavorite = favorites[key];
-                          return (
-                            <tr
-                              key={idx}
-                              className={`${getRowBg(
-                                isFavorite,
-                                artistIndex + idx + 1
-                              )} border-t border-zinc-700/50`}
-                            >
-                              <td
-                                className={`px-6 py-4 font-medium ${
-                                  release.artist_in_library
-                                    ? "text-red-500"
-                                    : release.similar_artist
-                                    ? "text-yellow-400"
-                                    : "text-zinc-300"
-                                }`}
-                              >
-                                &nbsp;&nbsp;
-                              </td>
-                              <td className={`px-6 py-4 ${albumStyle}`}>
-                                {release.album}
-                              </td>
-                              <td className="px-6 py-4 text-zinc-400">
-                                {release.label}
-                              </td>
-                              <td className="px-6 py-4 text-zinc-400">
-                                {release.genre}
-                              </td>
-                              <td className="px-6 py-4">
-                                {release.release_type === "new" ? (
-                                  <span className="inline-block bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-                                    {release.release_type}
-                                  </span>
-                                ) : (
-                                  <span className="text-zinc-400">
-                                    {release.release_type}
-                                  </span>
-                                )}
-                              </td>
-                              <td className="px-6 py-4">
-                                <input
-                                  type="checkbox"
-                                  checked={favorites[key] || false}
-                                  onChange={() =>
-                                    toggleFavorite(
-                                      release.artist,
-                                      release.album
-                                    )
-                                  }
-                                />
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </React.Fragment>
-                  );
-                }
-              )}
-            </tbody>
-          </table>
-        </div>
 
         {/* Back to Top */}
         <div className="mt-10 text-center">
@@ -641,25 +294,16 @@ export default function ReleaseTable() {
             </button>
             <h2 className="text-xl font-bold mb-4 text-red-500">How to Use</h2>
             <ul className="space-y-2 text-zinc-300 text-sm">
-              <li>o Click an artist row to expand and see albums.</li>
-              <li>o Red = in your library, Yellow = similar artist.</li>
-              <li>o Counts next to artist show how many albums.</li>
+              <li>• Red = in your library, Yellow = similar artist.</li>
+              <li>
+                • Click “View similar albums” to expand additional matches.
+              </li>
+              <li>• New = red badge, Reissue = gray label.</li>
               <li>
                 • Data comes from <code>final_releases.json</code>. Replace this
                 file to update.
               </li>
-              <li>• New = red badge, Reissue = gray label.</li>
             </ul>
-            <div className="mt-4">
-              <a
-                href="https://github.com/texas2pugs/new-spin-app/blob/main/README.md"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-zinc-400 hover:text-red-500 underline"
-              >
-                View full README.md
-              </a>
-            </div>
           </div>
         </div>
       )}
