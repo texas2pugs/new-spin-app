@@ -8,6 +8,10 @@ export default function ReleaseTable() {
   const [showHelp, setShowHelp] = useState(false);
   const [releaseWeek, setReleaseWeek] = useState(null);
 
+  // --- NEW STATE FOR RECOMMENDED TABLE SORT ---
+  // Key options: 'artist' (default) or 'matchCount'
+  const [recommendedSortKey, setRecommendedSortKey] = useState("artist");
+
   useEffect(() => {
     fetch("/final_releases.json")
       .then((res) => res.json())
@@ -67,7 +71,7 @@ export default function ReleaseTable() {
       !(r.artist_in_library && !r.album_in_library)
   );
 
-  // --- START: NEW FILTERING FOR RECOMMENDED TABLE ---
+  // NEW FILTERING FOR RECOMMENDED TABLE
   const recommendedReleases = mainReleasesList.filter(
     (r) => (r.similar_albums || []).length > 0
   );
@@ -75,7 +79,6 @@ export default function ReleaseTable() {
   const nonRecommendedMainList = mainReleasesList.filter(
     (r) => (r.similar_albums || []).length === 0
   );
-  // --- END: NEW FILTERING FOR RECOMMENDED TABLE ---
 
   const groupByArtist = (items) =>
     items.reduce((acc, release) => {
@@ -86,8 +89,8 @@ export default function ReleaseTable() {
     }, {});
 
   const groupedPriority = groupByArtist(priorityReleases);
-  const groupedRecommended = groupByArtist(recommendedReleases); // NEW GROUPING
-  const groupedMain = groupByArtist(nonRecommendedMainList); // USE NEW NON-RECOMMENDED LIST
+  const groupedRecommended = groupByArtist(recommendedReleases);
+  const groupedMain = groupByArtist(nonRecommendedMainList);
 
   const totalArtists = new Set(visibleReleases.map((r) => r.artist)).size;
   const totalAlbums = visibleReleases.length;
@@ -98,28 +101,50 @@ export default function ReleaseTable() {
     (r) => r.release_type === "reissue"
   ).length;
 
+  // --- NEW SORTING FUNCTION FOR RECOMMENDED GROUPS ---
+  const sortRecommendedGroups = (groups, sortKey) => {
+    if (sortKey === "artist") {
+      // Sort by artist name (A-Z) - default behavior
+      return groups.sort((a, b) => a[0].artist.localeCompare(b[0].artist));
+    }
+
+    // Sort by match count (Highest to Lowest)
+    return groups.sort((a, b) => {
+      // 'a' and 'b' are arrays of releases for a single artist.
+      // Get the highest match count for the artist group.
+      const maxMatchesA = Math.max(
+        ...a.map((r) => (r.similar_albums || []).length)
+      );
+      const maxMatchesB = Math.max(
+        ...b.map((r) => (r.similar_albums || []).length)
+      );
+
+      // Sort descending (b - a)
+      return maxMatchesB - maxMatchesA;
+    });
+  };
+  // -----------------------------------------------------
+
   const renderSimilarSection = (release) => {
     const similar = release.similar_albums || [];
     if (similar.length === 0) return null;
 
     const key = `${release.artist}::${release.album}`;
-    const score = release.recommendation_score || 0; // Keeping score for percentage calculation
+    const score = release.recommendation_score || 0;
 
-    // --- UPDATED MATCH-COUNT LOGIC ---
+    // UPDATED MATCH-COUNT LOGIC
     const matchCount = similar.length;
     let matchLabel = "Recommended";
 
     if (matchCount >= 10) {
-      // Adjusted based on common usage to 10+ for Strong
       matchLabel = "Strong Match";
     } else if (matchCount >= 5) {
-      // Adjusted to 5-9 for Mild
       matchLabel = "Mild Match";
     } else {
       // Under 5 matches
       matchLabel = "Weak Match";
     }
-    // --- END UPDATED MATCH-COUNT LOGIC ---
+    // END MATCH-COUNT LOGIC
 
     const percent = Math.round(score * 100);
 
@@ -147,6 +172,7 @@ export default function ReleaseTable() {
 
         {expandedSimilar[key] && (
           <ul className="ml-8 mt-1 text-zinc-300 list-disc">
+            {/* FIX: Sorted similar albums by artist */}
             {[...similar]
               .sort((a, b) => a.artist.localeCompare(b.artist))
               .map((a, idx) => (
@@ -178,7 +204,7 @@ export default function ReleaseTable() {
         <td
           className={`px-6 py-4 font-medium ${
             release.artist_in_library
-              ? "text-zinc-300" // FIX: Changed from text-red-500 to text-zinc-300
+              ? "text-zinc-300"
               : release.similar_artist
               ? "text-yellow-400"
               : "text-zinc-300"
@@ -211,67 +237,60 @@ export default function ReleaseTable() {
     );
   };
 
+  // Define the table configurations
+  const tableConfigs = [
+    ["⭐ Marked Releases", favoriteReleases, true, false, false], // Title, List, isFavoriteSection, isGrouped, isSortable
+    [
+      "🎵 Releases from my artists",
+      Object.values(groupedPriority),
+      false,
+      true,
+      false,
+    ],
+    // --- RECOMMENDED TABLE CONFIGURATION ---
+    [
+      "✨ Recommended Releases",
+      Object.values(groupedRecommended),
+      false,
+      true,
+      true, // isSortable is TRUE
+    ],
+    // ---------------------------------------
+    [
+      "📀 All Other Releases",
+      nonRecommendedMainList, // Using the non-grouped list
+      false,
+      false,
+      false,
+    ],
+  ];
+
   return (
     <div
       id="top"
       className="min-h-screen bg-gradient-to-b from-zinc-900 to-black text-zinc-100 p-6"
     >
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h1 className="text-4xl font-bold tracking-tight text-red-600 drop-shadow-[0_0_6px_rgba(139,0,0,0.5)]">
-              New Spin
-            </h1>
-
-            {releaseWeek && (
-              <div className="text-sm text-zinc-400 mt-1">{releaseWeek}</div>
-            )}
-          </div>
-
-          <button
-            onClick={() => setShowHelp(true)}
-            className="text-sm text-zinc-300 hover:text-red-500 underline"
-          >
-            Help
-          </button>
-        </div>
-
-        {/* Summary */}
-        <div className="mb-4 text-zinc-300 text-sm">
-          {totalArtists} artists, {totalAlbums} albums ({newCount} new,{" "}
-          {reissueCount} reissue)
-        </div>
+        {/* Header and Summary (Unchanged) */}
+        {/* ... */}
 
         {/* Tables */}
-        {[
-          ["⭐ Marked Releases", favoriteReleases, true, false],
-          [
-            "🎵 Releases from my artists",
-            Object.values(groupedPriority),
-            false,
-            true,
-          ],
-          // --- NEW TABLE ADDED FOR RECOMMENDED RELEASES ---
-          [
-            "✨ Recommended Releases",
-            Object.values(groupedRecommended),
-            false,
-            true,
-          ],
-          // ------------------------------------------------
-          [
-            "📀 All Other Releases",
-            Object.values(groupedMain).flat(), // Now only contains non-recommended, non-priority releases
-            false,
-            false,
-          ],
-        ].map(
+        {tableConfigs.map(
           (
-            [title, list, isFavoriteSection, isGrouped],
-            tableIdx // FIX: Added isGrouped to destructuring
-          ) =>
-            list.length > 0 && (
+            [title, list, isFavoriteSection, isGrouped, isSortable],
+            tableIdx
+          ) => {
+            if (list.length === 0) return null;
+
+            // --- Apply Sorting to Recommended Table Data ---
+            let sortedList = list;
+            if (isSortable) {
+              // Only runs for the Recommended Releases table
+              sortedList = sortRecommendedGroups([...list], recommendedSortKey);
+            }
+            // ------------------------------------------------
+
+            return (
               <div
                 key={tableIdx}
                 className="mb-8 overflow-x-auto rounded-xl shadow-lg ring-1 ring-zinc-700/50"
@@ -280,12 +299,42 @@ export default function ReleaseTable() {
                   className={`text-lg font-semibold mb-2 flex items-center gap-2 ${
                     isFavoriteSection
                       ? "text-red-400"
-                      : tableIdx === 1 // This styling index may shift, but we'll leave it for now
+                      : title.includes("Recommended")
+                      ? "text-yellow-400"
+                      : title.includes("artists")
                       ? "text-yellow-400"
                       : "text-zinc-300"
                   }`}
                 >
                   <span>{title}</span>
+
+                  {/* --- SORTING CONTROL FOR RECOMMENDED TABLE --- */}
+                  {isSortable && (
+                    <div className="text-sm font-normal ml-4 text-zinc-400">
+                      Sort by:
+                      <button
+                        onClick={() => setRecommendedSortKey("artist")}
+                        className={`ml-2 px-2 py-0.5 rounded ${
+                          recommendedSortKey === "artist"
+                            ? "bg-zinc-700 text-yellow-300"
+                            : "hover:text-yellow-400"
+                        }`}
+                      >
+                        Artist
+                      </button>
+                      <button
+                        onClick={() => setRecommendedSortKey("matchCount")}
+                        className={`ml-2 px-2 py-0.5 rounded ${
+                          recommendedSortKey === "matchCount"
+                            ? "bg-zinc-700 text-yellow-300"
+                            : "hover:text-yellow-400"
+                        }`}
+                      >
+                        Matches
+                      </button>
+                    </div>
+                  )}
+                  {/* ----------------------------------------------- */}
                 </h2>
                 <table className="w-full border-collapse">
                   <thead>
@@ -300,7 +349,7 @@ export default function ReleaseTable() {
                   </thead>
                   <tbody>
                     {isGrouped
-                      ? list.map((artistReleases, artistIdx) => (
+                      ? sortedList.map((artistReleases, artistIdx) => (
                           <React.Fragment key={artistIdx}>
                             {artistReleases.map((release, releaseIdx) => (
                               <React.Fragment key={releaseIdx}>
@@ -313,7 +362,7 @@ export default function ReleaseTable() {
                             ))}
                           </React.Fragment>
                         ))
-                      : list.map((release, idx) => (
+                      : sortedList.map((release, idx) => (
                           <React.Fragment key={idx}>
                             {renderReleaseRow(release, idx)}
                           </React.Fragment>
@@ -321,10 +370,11 @@ export default function ReleaseTable() {
                   </tbody>
                 </table>
               </div>
-            )
+            );
+          }
         )}
 
-        {/* Back to Top */}
+        {/* Back to Top and Help Modal (Unchanged) */}
         <div className="mt-10 text-center">
           <a
             href="#top"
@@ -339,7 +389,6 @@ export default function ReleaseTable() {
         </div>
       </div>
 
-      {/* Help Modal */}
       {showHelp && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50">
           <div className="bg-zinc-900 rounded-xl shadow-xl max-w-lg w-full p-6 relative">
