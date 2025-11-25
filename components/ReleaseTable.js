@@ -147,11 +147,13 @@ export default function ReleaseTable() {
 
         {expandedSimilar[key] && (
           <ul className="ml-8 mt-1 text-zinc-300 list-disc">
-            {similar.map((a, idx) => (
-              <li key={idx}>
-                {a.artist} – {a.album}
-              </li>
-            ))}
+            {[...similar]
+              .sort((a, b) => a.artist.localeCompare(b.artist))
+              .map((a, idx) => (
+                <li key={idx}>
+                  {a.artist} – {a.album}
+                </li>
+              ))}
           </ul>
         )}
       </div>
