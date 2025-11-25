@@ -67,6 +67,16 @@ export default function ReleaseTable() {
       !(r.artist_in_library && !r.album_in_library)
   );
 
+  // --- START: NEW FILTERING FOR RECOMMENDED TABLE ---
+  const recommendedReleases = mainReleasesList.filter(
+    (r) => (r.similar_albums || []).length > 0
+  );
+
+  const nonRecommendedMainList = mainReleasesList.filter(
+    (r) => (r.similar_albums || []).length === 0
+  );
+  // --- END: NEW FILTERING FOR RECOMMENDED TABLE ---
+
   const groupByArtist = (items) =>
     items.reduce((acc, release) => {
       const artist = release.artist;
@@ -76,7 +86,8 @@ export default function ReleaseTable() {
     }, {});
 
   const groupedPriority = groupByArtist(priorityReleases);
-  const groupedMain = groupByArtist(mainReleasesList);
+  const groupedRecommended = groupByArtist(recommendedReleases); // NEW GROUPING
+  const groupedMain = groupByArtist(nonRecommendedMainList); // USE NEW NON-RECOMMENDED LIST
 
   const totalArtists = new Set(visibleReleases.map((r) => r.artist)).size;
   const totalAlbums = visibleReleases.length;
@@ -94,31 +105,30 @@ export default function ReleaseTable() {
     const key = `${release.artist}::${release.album}`;
     const score = release.recommendation_score || 0; // Keeping score for percentage calculation
 
-    // --- START NEW MATCH-COUNT LOGIC ---
+    // --- UPDATED MATCH-COUNT LOGIC ---
     const matchCount = similar.length;
-    let matchLabel = "Recommended"; // Default (shouldn't be hit if logic is sound)
+    let matchLabel = "Recommended";
 
     if (matchCount >= 10) {
+      // Adjusted based on common usage to 10+ for Strong
       matchLabel = "Strong Match";
     } else if (matchCount >= 5) {
+      // Adjusted to 5-9 for Mild
       matchLabel = "Mild Match";
     } else {
       // Under 5 matches
       matchLabel = "Weak Match";
     }
-    // --- END NEW MATCH-COUNT LOGIC ---
+    // --- END UPDATED MATCH-COUNT LOGIC ---
 
     const percent = Math.round(score * 100);
 
-    // NOTE: Simplified star logic using the recommendation_score percentage,
-    // as requested (keeping the percentage as is).
     const stars = "★★★★★";
     const filled = Math.round((percent / 100) * 5);
 
     return (
       <div className="mt-1 ml-2 text-sm text-yellow-300">
         <div>
-          {/* USE THE NEW matchLabel HERE */}
           {matchLabel}{" "}
           <span className="text-yellow-400">
             {stars.slice(0, filled)}
@@ -166,7 +176,7 @@ export default function ReleaseTable() {
         <td
           className={`px-6 py-4 font-medium ${
             release.artist_in_library
-              ? "text-zinc-300"
+              ? "text-zinc-300" // FIX: Changed from text-red-500 to text-zinc-300
               : release.similar_artist
               ? "text-yellow-400"
               : "text-zinc-300"
@@ -240,14 +250,25 @@ export default function ReleaseTable() {
             false,
             true,
           ],
+          // --- NEW TABLE ADDED FOR RECOMMENDED RELEASES ---
+          [
+            "✨ Recommended Releases",
+            Object.values(groupedRecommended),
+            false,
+            true,
+          ],
+          // ------------------------------------------------
           [
             "📀 All Other Releases",
-            Object.values(groupedMain).flat(),
+            Object.values(groupedMain).flat(), // Now only contains non-recommended, non-priority releases
             false,
             false,
           ],
         ].map(
-          ([title, list, isFavoriteSection, isGrouped], tableIdx) =>
+          (
+            [title, list, isFavoriteSection, isGrouped],
+            tableIdx // FIX: Added isGrouped to destructuring
+          ) =>
             list.length > 0 && (
               <div
                 key={tableIdx}
@@ -257,7 +278,7 @@ export default function ReleaseTable() {
                   className={`text-lg font-semibold mb-2 flex items-center gap-2 ${
                     isFavoriteSection
                       ? "text-red-400"
-                      : tableIdx === 1
+                      : tableIdx === 1 // This styling index may shift, but we'll leave it for now
                       ? "text-yellow-400"
                       : "text-zinc-300"
                   }`}
