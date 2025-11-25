@@ -271,8 +271,33 @@ export default function ReleaseTable() {
       className="min-h-screen bg-gradient-to-b from-zinc-900 to-black text-zinc-100 p-6"
     >
       <div className="max-w-6xl mx-auto">
-        {/* Header and Summary (Unchanged) */}
-        {/* ... */}
+        {/* Header */}
+
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight text-red-600 drop-shadow-[0_0_6px_rgba(139,0,0,0.5)]">
+              New Spin
+            </h1>
+
+            {releaseWeek && (
+              <div className="text-sm text-zinc-400 mt-1">{releaseWeek}</div>
+            )}
+          </div>
+
+          <button
+            onClick={() => setShowHelp(true)}
+            className="text-sm text-zinc-300 hover:text-red-500 underline"
+          >
+            Help
+          </button>
+        </div>
+
+        {/* Summary */}
+
+        <div className="mb-4 text-zinc-300 text-sm">
+          {totalArtists} artists, {totalAlbums} albums ({newCount} new,{" "}
+          {reissueCount} reissue)
+        </div>
 
         {/* Tables */}
         {tableConfigs.map(
