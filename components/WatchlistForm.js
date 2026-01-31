@@ -4,7 +4,12 @@ import React, { useState } from 'react';
 
 export default function WatchlistForm({ onRefresh }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [formData, setFormData] = useState({ artist: '', album: '', song: '' });
+  const [formData, setFormData] = useState({
+    artist: '',
+    album: '',
+    song: '',
+    date: '',
+  });
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -19,7 +24,7 @@ export default function WatchlistForm({ onRefresh }) {
       });
 
       if (res.ok) {
-        setFormData({ artist: '', album: '', song: '' });
+        setFormData({ artist: '', album: '', song: '', date: '' });
         setIsOpen(false);
         if (onRefresh) onRefresh(); // Tell the main table to reload the list
       }
@@ -67,6 +72,13 @@ export default function WatchlistForm({ onRefresh }) {
             className="bg-black border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-200 outline-none focus:border-red-600 flex-1 min-w-[150px]"
             value={formData.song}
             onChange={(e) => setFormData({ ...formData, song: e.target.value })}
+          />
+          <input
+            type="date"
+            placeholder="Release Date"
+            className="bg-black border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-400 outline-none focus:border-red-600 flex-1 min-w-[150px] [color-scheme:dark]"
+            value={formData.date}
+            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
           />
           <button
             type="submit"

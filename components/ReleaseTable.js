@@ -326,14 +326,14 @@ export default function ReleaseTable() {
                   <th className="px-6 py-4">Artist</th>
                   <th className="px-6 py-4">Album</th>
                   <th className="px-6 py-4">Notable Song</th>
-                  <th className="px-6 py-4 text-right">Added</th>
+                  <th className="px-6 py-4">Expected Release</th>
                 </tr>
               </thead>
               <tbody>
                 {watchlist.map((item, idx) => (
                   <tr
                     key={item.id || idx}
-                    className="border-t border-zinc-700/50 bg-zinc-900/40"
+                    className="border-t border-zinc-700/50 bg-zinc-900/40 hover:bg-zinc-800/50"
                   >
                     <td className="px-6 py-4 font-medium text-zinc-300">
                       {item.artist}
@@ -344,10 +344,16 @@ export default function ReleaseTable() {
                     <td className="px-6 py-4 text-zinc-500 text-sm">
                       {item.song || '—'}
                     </td>
-                    <td className="px-6 py-4 text-zinc-600 text-xs text-right">
-                      {item.id
-                        ? new Date(item.id).toLocaleDateString()
-                        : 'Recently'}
+                    <td className="px-6 py-4 text-zinc-400 text-sm">
+                      {item.date ? (
+                        new Date(item.date).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })
+                      ) : (
+                        <span className="text-zinc-600 italic">TBD</span>
+                      )}
                     </td>
                   </tr>
                 ))}
