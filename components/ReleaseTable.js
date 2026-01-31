@@ -1,5 +1,7 @@
-"use client";
-import React, { useEffect, useState } from "react";
+'use client';
+import React, { useEffect, useState } from 'react';
+
+import WatchlistForm from './WatchlistForm';
 
 export default function ReleaseTable() {
   const [releases, setReleases] = useState([]);
@@ -7,21 +9,31 @@ export default function ReleaseTable() {
   const [favorites, setFavorites] = useState({});
   const [showHelp, setShowHelp] = useState(false);
   const [releaseWeek, setReleaseWeek] = useState(null);
+  const [watchlist, setWatchlist] = useState([]);
 
   // --- NEW STATE FOR RECOMMENDED TABLE SORT ---
   // Key options: 'artist' (default) or 'matchCount'
-  const [recommendedSortKey, setRecommendedSortKey] = useState("artist");
+  const [recommendedSortKey, setRecommendedSortKey] = useState('artist');
+
+  const fetchWatchlist = () => {
+    fetch('/watchlist.json')
+      .then((res) => res.json())
+      .then((data) => setWatchlist(data || []))
+      .catch((err) => console.error('Error loading watchlist:', err));
+  };
 
   useEffect(() => {
-    fetch("/final_releases.json")
+    fetch('/final_releases.json')
       .then((res) => res.json())
       .then((data) => {
         setReleaseWeek(data.release_week || null);
         setReleases(data.items || []);
       })
-      .catch((err) => console.error("Error loading releases:", err));
+      .catch((err) => console.error('Error loading releases:', err));
 
-    const savedFavorites = localStorage.getItem("favorites");
+    fetchWatchlist();
+
+    const savedFavorites = localStorage.getItem('favorites');
     if (savedFavorites) setFavorites(JSON.parse(savedFavorites));
   }, []);
 
@@ -36,14 +48,14 @@ export default function ReleaseTable() {
     const key = `${artist}::${album}`;
     const newFavorites = { ...favorites, [key]: !favorites[key] };
     setFavorites(newFavorites);
-    localStorage.setItem("favorites", JSON.stringify(newFavorites));
+    localStorage.setItem('favorites', JSON.stringify(newFavorites));
   };
 
   const getRowBg = (isFavorite, index) => {
-    if (isFavorite) return "bg-blue-500/30";
+    if (isFavorite) return 'bg-blue-500/30';
     return index % 2 === 0
-      ? "bg-zinc-900 hover:bg-red-900/30"
-      : "bg-zinc-950 hover:bg-red-900/30";
+      ? 'bg-zinc-900 hover:bg-red-900/30'
+      : 'bg-zinc-950 hover:bg-red-900/30';
   };
 
   const visibleReleases = releases;
@@ -51,33 +63,33 @@ export default function ReleaseTable() {
   const favoriteKeys = new Set(
     Object.entries(favorites)
       .filter(([_, v]) => v)
-      .map(([k]) => k)
+      .map(([k]) => k),
   );
 
   const favoriteReleases = visibleReleases.filter((r) =>
-    favoriteKeys.has(`${r.artist}::${r.album}`)
+    favoriteKeys.has(`${r.artist}::${r.album}`),
   );
 
   const priorityReleases = visibleReleases.filter(
     (r) =>
       r.artist_in_library &&
       !r.album_in_library &&
-      !favoriteKeys.has(`${r.artist}::${r.album}`)
+      !favoriteKeys.has(`${r.artist}::${r.album}`),
   );
 
   const mainReleasesList = visibleReleases.filter(
     (r) =>
       !favoriteKeys.has(`${r.artist}::${r.album}`) &&
-      !(r.artist_in_library && !r.album_in_library)
+      !(r.artist_in_library && !r.album_in_library),
   );
 
   // NEW FILTERING FOR RECOMMENDED TABLE
   const recommendedReleases = mainReleasesList.filter(
-    (r) => (r.similar_albums || []).length > 0
+    (r) => (r.similar_albums || []).length > 0,
   );
 
   const nonRecommendedMainList = mainReleasesList.filter(
-    (r) => (r.similar_albums || []).length === 0
+    (r) => (r.similar_albums || []).length === 0,
   );
 
   const groupByArtist = (items) =>
@@ -95,15 +107,15 @@ export default function ReleaseTable() {
   const totalArtists = new Set(visibleReleases.map((r) => r.artist)).size;
   const totalAlbums = visibleReleases.length;
   const newCount = visibleReleases.filter(
-    (r) => r.release_type === "new"
+    (r) => r.release_type === 'new',
   ).length;
   const reissueCount = visibleReleases.filter(
-    (r) => r.release_type === "reissue"
+    (r) => r.release_type === 'reissue',
   ).length;
 
   // --- NEW SORTING FUNCTION FOR RECOMMENDED GROUPS ---
   const sortRecommendedGroups = (groups, sortKey) => {
-    if (sortKey === "artist") {
+    if (sortKey === 'artist') {
       // Sort by artist name (A-Z) - default behavior
       return groups.sort((a, b) => a[0].artist.localeCompare(b[0].artist));
     }
@@ -113,10 +125,10 @@ export default function ReleaseTable() {
       // 'a' and 'b' are arrays of releases for a single artist.
       // Get the highest match count for the artist group.
       const maxMatchesA = Math.max(
-        ...a.map((r) => (r.similar_albums || []).length)
+        ...a.map((r) => (r.similar_albums || []).length),
       );
       const maxMatchesB = Math.max(
-        ...b.map((r) => (r.similar_albums || []).length)
+        ...b.map((r) => (r.similar_albums || []).length),
       );
 
       // Sort descending (b - a)
@@ -134,31 +146,31 @@ export default function ReleaseTable() {
 
     // UPDATED MATCH-COUNT LOGIC
     const matchCount = similar.length;
-    let matchLabel = "Recommended";
+    let matchLabel = 'Recommended';
 
     if (matchCount >= 10) {
-      matchLabel = "Strong Match";
+      matchLabel = 'Strong Match';
     } else if (matchCount >= 5) {
-      matchLabel = "Mild Match";
+      matchLabel = 'Mild Match';
     } else {
       // Under 5 matches
-      matchLabel = "Weak Match";
+      matchLabel = 'Weak Match';
     }
     // END MATCH-COUNT LOGIC
 
     const percent = Math.round(score * 100);
 
-    const stars = "★★★★★";
+    const stars = '★★★★★';
     const filled = Math.round((percent / 100) * 5);
 
     return (
       <div className="mt-1 ml-2 text-sm text-yellow-300">
         <div>
-          {matchLabel}{" "}
+          {matchLabel}{' '}
           <span className="text-yellow-400">
             {stars.slice(0, filled)}
             <span className="text-zinc-600">{stars.slice(filled)}</span>
-          </span>{" "}
+          </span>{' '}
           ({percent}%)
         </div>
 
@@ -167,7 +179,7 @@ export default function ReleaseTable() {
           className="cursor-pointer text-yellow-400 hover:text-yellow-200 ml-4"
         >
           ↳ View similar albums ({similar.length} match
-          {similar.length !== 1 ? "es" : ""})
+          {similar.length !== 1 ? 'es' : ''})
         </div>
 
         {expandedSimilar[key] && (
@@ -188,8 +200,8 @@ export default function ReleaseTable() {
 
   const renderReleaseRow = (release, rowIndex) => {
     const albumStyle = release.album_in_library
-      ? "text-red-500"
-      : "text-zinc-400";
+      ? 'text-red-500'
+      : 'text-zinc-400';
     const key = `${release.artist}::${release.album}`;
     const isFavorite = favorites[key];
 
@@ -198,16 +210,16 @@ export default function ReleaseTable() {
         key={key}
         className={`${getRowBg(
           isFavorite,
-          rowIndex
+          rowIndex,
         )} border-t border-zinc-700/50 align-top`}
       >
         <td
           className={`px-6 py-4 font-medium ${
             release.artist_in_library
-              ? "text-zinc-300"
+              ? 'text-zinc-300'
               : release.similar_artist
-              ? "text-yellow-400"
-              : "text-zinc-300"
+                ? 'text-yellow-400'
+                : 'text-zinc-300'
           }`}
         >
           <div>{release.artist}</div>
@@ -218,7 +230,7 @@ export default function ReleaseTable() {
         <td className="px-6 py-4 text-zinc-400">{release.label}</td>
         <td className="px-6 py-4 text-zinc-400">{release.genre}</td>
         <td className="px-6 py-4">
-          {release.release_type === "new" ? (
+          {release.release_type === 'new' ? (
             <span className="inline-block bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
               {release.release_type}
             </span>
@@ -239,9 +251,9 @@ export default function ReleaseTable() {
 
   // Define the table configurations
   const tableConfigs = [
-    ["⭐ Marked Releases", favoriteReleases, true, false, false], // Title, List, isFavoriteSection, isGrouped, isSortable
+    ['⭐ Marked Releases', favoriteReleases, true, false, false], // Title, List, isFavoriteSection, isGrouped, isSortable
     [
-      "🎵 Releases from my artists",
+      '🎵 Releases from my artists',
       Object.values(groupedPriority),
       false,
       true,
@@ -249,7 +261,7 @@ export default function ReleaseTable() {
     ],
     // --- RECOMMENDED TABLE CONFIGURATION ---
     [
-      "✨ Recommended Releases",
+      '✨ Recommended Releases',
       Object.values(groupedRecommended),
       false,
       true,
@@ -257,7 +269,7 @@ export default function ReleaseTable() {
     ],
     // ---------------------------------------
     [
-      "📀 All Other Releases",
+      '📀 All Other Releases',
       nonRecommendedMainList, // Using the non-grouped list
       false,
       false,
@@ -295,15 +307,59 @@ export default function ReleaseTable() {
         {/* Summary */}
 
         <div className="mb-4 text-zinc-300 text-sm">
-          {totalArtists} artists, {totalAlbums} albums ({newCount} new,{" "}
+          {totalArtists} artists, {totalAlbums} albums ({newCount} new,{' '}
           {reissueCount} reissue)
         </div>
 
         {/* Tables */}
+        {/* Watchlist Section */}
+        <WatchlistForm onRefresh={fetchWatchlist} />
+
+        {watchlist.length > 0 && (
+          <div className="mb-8 overflow-x-auto rounded-xl shadow-lg ring-1 ring-zinc-700/50 bg-zinc-900/20">
+            <h2 className="text-lg font-semibold mb-2 p-2 flex items-center gap-2 text-blue-400">
+              <span>📅 My Watchlist</span>
+            </h2>
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-zinc-800 text-left text-sm uppercase tracking-wider text-blue-500">
+                  <th className="px-6 py-4">Artist</th>
+                  <th className="px-6 py-4">Album</th>
+                  <th className="px-6 py-4">Notable Song</th>
+                  <th className="px-6 py-4 text-right">Added</th>
+                </tr>
+              </thead>
+              <tbody>
+                {watchlist.map((item, idx) => (
+                  <tr
+                    key={item.id || idx}
+                    className="border-t border-zinc-700/50 bg-zinc-900/40"
+                  >
+                    <td className="px-6 py-4 font-medium text-zinc-300">
+                      {item.artist}
+                    </td>
+                    <td className="px-6 py-4 text-zinc-400 italic">
+                      {item.album}
+                    </td>
+                    <td className="px-6 py-4 text-zinc-500 text-sm">
+                      {item.song || '—'}
+                    </td>
+                    <td className="px-6 py-4 text-zinc-600 text-xs text-right">
+                      {item.id
+                        ? new Date(item.id).toLocaleDateString()
+                        : 'Recently'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         {tableConfigs.map(
           (
             [title, list, isFavoriteSection, isGrouped, isSortable],
-            tableIdx
+            tableIdx,
           ) => {
             if (list.length === 0) return null;
 
@@ -323,12 +379,12 @@ export default function ReleaseTable() {
                 <h2
                   className={`text-lg font-semibold mb-2 flex items-center gap-2 ${
                     isFavoriteSection
-                      ? "text-red-400"
-                      : title.includes("Recommended")
-                      ? "text-yellow-400"
-                      : title.includes("artists")
-                      ? "text-yellow-400"
-                      : "text-zinc-300"
+                      ? 'text-red-400'
+                      : title.includes('Recommended')
+                        ? 'text-yellow-400'
+                        : title.includes('artists')
+                          ? 'text-yellow-400'
+                          : 'text-zinc-300'
                   }`}
                 >
                   <span>{title}</span>
@@ -338,21 +394,21 @@ export default function ReleaseTable() {
                     <div className="text-sm font-normal ml-4 text-zinc-400">
                       Sort by:
                       <button
-                        onClick={() => setRecommendedSortKey("artist")}
+                        onClick={() => setRecommendedSortKey('artist')}
                         className={`ml-2 px-2 py-0.5 rounded ${
-                          recommendedSortKey === "artist"
-                            ? "bg-zinc-700 text-yellow-300"
-                            : "hover:text-yellow-400"
+                          recommendedSortKey === 'artist'
+                            ? 'bg-zinc-700 text-yellow-300'
+                            : 'hover:text-yellow-400'
                         }`}
                       >
                         Artist
                       </button>
                       <button
-                        onClick={() => setRecommendedSortKey("matchCount")}
+                        onClick={() => setRecommendedSortKey('matchCount')}
                         className={`ml-2 px-2 py-0.5 rounded ${
-                          recommendedSortKey === "matchCount"
-                            ? "bg-zinc-700 text-yellow-300"
-                            : "hover:text-yellow-400"
+                          recommendedSortKey === 'matchCount'
+                            ? 'bg-zinc-700 text-yellow-300'
+                            : 'hover:text-yellow-400'
                         }`}
                       >
                         Matches
@@ -381,7 +437,8 @@ export default function ReleaseTable() {
                                 {/* Calculate index for correct row banding */}
                                 {renderReleaseRow(
                                   release,
-                                  artistIdx * artistReleases.length + releaseIdx
+                                  artistIdx * artistReleases.length +
+                                    releaseIdx,
                                 )}
                               </React.Fragment>
                             ))}
@@ -396,7 +453,7 @@ export default function ReleaseTable() {
                 </table>
               </div>
             );
-          }
+          },
         )}
 
         {/* Back to Top and Help Modal (Unchanged) */}
@@ -406,7 +463,7 @@ export default function ReleaseTable() {
             className="text-sm text-zinc-400 hover:text-red-500 underline"
             onClick={(e) => {
               e.preventDefault();
-              window.scrollTo({ top: 0, behavior: "smooth" });
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
           >
             Back to Top ▲
