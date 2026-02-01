@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 
 import WatchlistForm from './WatchlistForm';
 
@@ -295,6 +295,21 @@ export default function ReleaseTable() {
     ],
   ];
 
+  const sortedWatchlist = useMemo(() => {
+    return [...watchlist].sort((a, b) => {
+      // 1. Both have dates - sort soonest first
+      if (a.date && b.date) {
+        return new Date(a.date) - new Date(b.date);
+      }
+      // 2. Only 'a' has a date - 'a' comes first
+      if (a.date) return -1;
+      // 3. Only 'b' has a date - 'b' comes first
+      if (b.date) return 1;
+      // 4. Neither has a date - sort alphabetically by artist
+      return a.artist.localeCompare(b.artist);
+    });
+  }, [watchlist]);
+
   return (
     <div
       id="top"
@@ -353,7 +368,7 @@ export default function ReleaseTable() {
                 </tr>
               </thead>
               <tbody>
-                {watchlist.map((item, idx) => (
+                {sortedWatchlist.map((item, idx) => (
                   <tr
                     key={item.id || idx}
                     className="border-t border-zinc-700/50 bg-zinc-900/40 hover:bg-zinc-800/50"
@@ -367,7 +382,13 @@ export default function ReleaseTable() {
                     <td className="px-6 py-4 text-zinc-500 text-sm">
                       {item.song || '—'}
                     </td>
-                    <td className="px-6 py-4 text-zinc-400 text-sm">
+                    <td
+                      className={`px-6 py-4 text-sm font-medium ${
+                        item.date && new Date(item.date) <= new Date()
+                          ? 'text-red-400 font-bold' // Released or Releasing Today
+                          : 'text-zinc-400'
+                      }`}
+                    >
                       {item.date ? (
                         // We append "T00:00:00" to force the browser to stay in YOUR timezone
                         new Date(item.date + 'T00:00:00').toLocaleDateString(
