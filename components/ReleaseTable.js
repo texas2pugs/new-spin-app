@@ -369,11 +369,15 @@ export default function ReleaseTable() {
                     </td>
                     <td className="px-6 py-4 text-zinc-400 text-sm">
                       {item.date ? (
-                        new Date(item.date).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })
+                        // We append "T00:00:00" to force the browser to stay in YOUR timezone
+                        new Date(item.date + 'T00:00:00').toLocaleDateString(
+                          undefined,
+                          {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          },
+                        )
                       ) : (
                         <span className="text-zinc-600 italic">TBD</span>
                       )}
