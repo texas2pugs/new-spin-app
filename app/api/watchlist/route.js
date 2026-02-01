@@ -57,3 +57,27 @@ export async function DELETE(request) {
     );
   }
 }
+
+export async function PUT(request) {
+  try {
+    const updatedItem = await request.json();
+    const filePath = path.join(process.cwd(), 'public', 'watchlist.json');
+
+    const fileData = await fs.readFile(filePath, 'utf8');
+    let watchlist = JSON.parse(fileData);
+
+    // Replace the old item with the new one
+    const updatedWatchlist = watchlist.map((item) =>
+      item.id === updatedItem.id ? updatedItem : item,
+    );
+
+    await fs.writeFile(filePath, JSON.stringify(updatedWatchlist, null, 2));
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to update item' },
+      { status: 500 },
+    );
+  }
+}

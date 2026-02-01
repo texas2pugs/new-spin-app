@@ -1,32 +1,50 @@
 // components/WatchlistForm.js
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-export default function WatchlistForm({ onRefresh }) {
+export default function WatchlistForm({ onRefresh, editItem, setEditItem }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     artist: '',
     album: '',
     song: '',
     date: '',
   });
-  const [loading, setLoading] = useState(false);
+
+  // Use useEffect to "fill" the form when editItem changes
+  useEffect(() => {
+    if (editItem) {
+      setFormData({
+        artist: editItem.artist,
+        album: editItem.album,
+        song: editItem.song || '',
+        date: editItem.date || '',
+      });
+      setIsOpen(true);
+    }
+  }, [editItem]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
+    // Determine if we are updating or creating
+    const method = editItem ? 'PUT' : 'POST';
+    const body = editItem ? { ...formData, id: editItem.id } : formData;
+
     try {
       const res = await fetch('/api/watchlist', {
-        method: 'POST',
+        method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(body),
       });
 
       if (res.ok) {
         setFormData({ artist: '', album: '', song: '', date: '' });
         setIsOpen(false);
-        if (onRefresh) onRefresh(); // Tell the main table to reload the list
+        setEditItem(null); // Clear edit state
+        if (onRefresh) onRefresh();
       }
     } catch (err) {
       console.error('Submit error:', err);

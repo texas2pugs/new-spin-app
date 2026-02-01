@@ -10,6 +10,7 @@ export default function ReleaseTable() {
   const [showHelp, setShowHelp] = useState(false);
   const [releaseWeek, setReleaseWeek] = useState(null);
   const [watchlist, setWatchlist] = useState([]);
+  const [editItem, setEditItem] = useState(null);
 
   // --- NEW STATE FOR RECOMMENDED TABLE SORT ---
   // Key options: 'artist' (default) or 'matchCount'
@@ -330,7 +331,11 @@ export default function ReleaseTable() {
 
         {/* Tables */}
         {/* Watchlist Section */}
-        <WatchlistForm onRefresh={fetchWatchlist} />
+        <WatchlistForm
+          onRefresh={fetchWatchlist}
+          editItem={editItem}
+          setEditItem={setEditItem}
+        />
 
         {watchlist.length > 0 && (
           <div className="mb-8 overflow-x-auto rounded-xl shadow-lg ring-1 ring-zinc-700/50 bg-zinc-900/20">
@@ -374,6 +379,26 @@ export default function ReleaseTable() {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => setEditItem(item)}
+                        className="text-zinc-500 hover:text-blue-400 transition-colors p-2"
+                        title="Edit entry"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
+                        </svg>
+                      </button>
                       <button
                         onClick={() => handleDelete(item.id)}
                         className="text-zinc-500 hover:text-red-500 transition-colors p-2"
