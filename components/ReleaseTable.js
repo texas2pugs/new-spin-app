@@ -51,6 +51,23 @@ export default function ReleaseTable() {
     localStorage.setItem('favorites', JSON.stringify(newFavorites));
   };
 
+  // Delete Watchlist entry
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to remove this album?')) return;
+
+    try {
+      const res = await fetch(`/api/watchlist?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        fetchWatchlist(); // Refresh the list after deleting
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+    }
+  };
+
   const getRowBg = (isFavorite, index) => {
     if (isFavorite) return 'bg-blue-500/30';
     return index % 2 === 0
@@ -327,6 +344,7 @@ export default function ReleaseTable() {
                   <th className="px-6 py-4">Album</th>
                   <th className="px-6 py-4">Notable Song</th>
                   <th className="px-6 py-4">Expected Release</th>
+                  <th className="px-6 py-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -354,6 +372,28 @@ export default function ReleaseTable() {
                       ) : (
                         <span className="text-zinc-600 italic">TBD</span>
                       )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="text-zinc-500 hover:text-red-500 transition-colors p-2"
+                        title="Remove from watchlist"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
                     </td>
                   </tr>
                 ))}

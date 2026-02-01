@@ -33,3 +33,27 @@ export async function POST(request) {
     );
   }
 }
+
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    const filePath = path.join(process.cwd(), 'public', 'watchlist.json');
+
+    const fileData = await fs.readFile(filePath, 'utf8');
+    let watchlist = JSON.parse(fileData);
+
+    // Filter out the item with the matching ID
+    // Note: Use Number(id) because Date.now() is a number, but URL params are strings
+    const updatedWatchlist = watchlist.filter((item) => item.id !== Number(id));
+
+    await fs.writeFile(filePath, JSON.stringify(updatedWatchlist, null, 2));
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to delete item' },
+      { status: 500 },
+    );
+  }
+}
